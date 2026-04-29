@@ -1,0 +1,7 @@
+crewai
+langchain
+faiss-cpu
+sentence-transformers
+openai
+pypdf
+arxiv
