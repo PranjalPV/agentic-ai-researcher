@@ -1,88 +1,88 @@
-# agents.py
 from crewai import Agent
-
-# ---- Tools ----
 from config.llm import get_llm
-from tools.rag_ingestion_tool import rag_ingestion_tool
 from tools.arxiv_tool import arxiv_tool
 from tools.Semantic_Scholar_tool import semantic_scholar_tool
 from tools.pdf_ingestion_tool import pdf_ingestion_tool
+from tools.rag_ingestion_tool import rag_ingestion_tool
 from rag.rag_tool import rag_tool
 
-
-
-
 # ======================================================
-# 1️⃣ Research Agent – Finds papers
+# 1. Lead AI Literature Scout
 # ======================================================
 research_agent = Agent(
-    role="AI Research Agent",
-    goal="Find high-quality research papers relevant to the given topic",
-    backstory="Expert at academic literature search and filtering",
+    role="Lead AI Literature Scout",
+    goal="Discover top-tier, relevant academic papers from arXiv and Semantic Scholar for: {query}. Filter for technical depth and provide direct PDF download links.",
+    backstory=(
+        "You are a senior bibliometric scientist and research scout. You know how to construct "
+        "precise keyword queries, cross-reference arXiv and Semantic Scholar, analyze abstracts, "
+        "and select the most influential or relevant papers while capturing verifiable open-access PDF links."
+    ),
     tools=[arxiv_tool, semantic_scholar_tool],
-    llm=get_llm(), 
-    verbose=True
+    llm=get_llm("primary"),
+    verbose=True,
+    allow_delegation=False
 )
 
-
 # ======================================================
-# 2️⃣ Ingestion Agent – RAG over PDFs
+# 2. Academic Document Ingestion & RAG Engineer
 # ======================================================
 ingestion_agent = Agent(
-    role="Ingestion Agent",
-    goal="Download and index papers for deep search",
-    backstory="Expert in vector search and document retrieval",
+    role="Academic Document Ingestion & RAG Engineer",
+    goal="Download the discovered research PDFs and index them into the Hybrid RAG engine (Dense + BM25) with page-level layout awareness.",
+    backstory=(
+        "You are an expert in neural document processing and knowledge graph ingestion. "
+        "You take PDF URLs, download the binary documents securely, validate document integrity, "
+        "and index text chunks into the hybrid vector store for precise, citation-grounded retrieval."
+    ),
     tools=[pdf_ingestion_tool, rag_ingestion_tool],
-    llm=get_llm(), 
-    verbose=True
+    llm=get_llm("primary"),
+    verbose=True,
+    allow_delegation=False
 )
-    
 
 # ======================================================
-# 3️⃣ Comparison Agent – Compare papers
+# 3. Systematic Reviewer & Comparative Analyst
 # ======================================================
 comparison_agent = Agent(
-    role="Research Comparison Agent",
+    role="Systematic Reviewer & Comparative Analyst",
     goal="""
-    Compare the retrieved papers based on:
-    - Methodology
-    - Dataset
-    - Evaluation metrics
-    - Results
-    - Strengths & limitations
+    Query the indexed papers via the hybrid RAG tool and construct a thorough, structured comparative matrix covering:
+    - Core Methodologies & Architectural Innovations
+    - Datasets & Experimental Setups
+    - Quantitative Benchmark Metrics & Results
+    - Algorithmic Strengths and Critical Limitations
+    Always cite sources with specific paper titles and page numbers.
     """,
-    backstory="Expert in systematic literature comparison",
+    backstory=(
+        "You are a veteran meta-reviewer for premier AI conferences (NeurIPS, ICML, ICLR). "
+        "You dissect academic claims, compare empirical trade-offs, and ground your synthesis "
+        "exclusively in verified citations extracted through vector retrieval."
+    ),
     tools=[rag_tool],
-    llm=get_llm(),
-    verbose=True
+    llm=get_llm("primary"),
+    verbose=True,
+    allow_delegation=False
 )
 
-
 # ======================================================
-# 4️⃣ Insight Agent – Research gaps & future work
+# 4. Principal Research Strategist
 # ======================================================
 insight_agent = Agent(
-    role="Insight Generation Agent",
+    role="Principal Research Strategist",
     goal="""
-    Identify:
-    - Research gaps
-    - Open challenges
-    - Future research directions
-    - Most promising approaches
+    Critically analyze the literature to uncover:
+    - Key Research Gaps & Unexplored Hypotheses
+    - Open Engineering & Scaling Bottlenecks
+    - Actionable, High-Impact Future Research Directions
+    - The Most Promising Baseline Architecture to Build Upon
+    Synthesize the findings into an executive research dossier.
     """,
-    backstory="Senior AI researcher generating strategic insights",
+    backstory=(
+        "You are a Distinguished AI Research Director. You look beyond incremental benchmark improvements "
+        "to spot foundational theoretical gaps, reproducibility bottlenecks, and non-obvious breakthrough directions."
+    ),
     tools=[rag_tool],
-    llm=get_llm(),
-    verbose=True
+    llm=get_llm("primary"),
+    verbose=True,
+    allow_delegation=False
 )
-
-
-# ======================================================
-# Optional: Export all agents together
-# ======================================================
-# ALL_AGENTS = {
-#     "research": research_agent,
-#     "retrieval": retrieval_agent,
-#     "comparison": comparison_agent,
-#     "insight": insight_agent
-# }
