@@ -3,4 +3,7 @@ __pycache__/
 .env
 venv/
 db_healthcare_research/
+chroma_db/
 temp_papers/
+reports/
+.pytest_cache/

@@ -1,48 +1,38 @@
-import os
-from dotenv import load_dotenv
-from crewai_tools import RagTool
+from typing import Optional
+from crewai.tools import tool
+from rag.hybrid_rag import HybridRAG
 
-load_dotenv()
-
-# Force dummy values if they aren't in your .env
-# if not os.getenv("OPENAI_API_KEY"):
-#     os.environ["OPENAI_API_KEY"] = "not_needed"
-# if not os.getenv("CHROMA_HUGGINGFACE_API_KEY"):
-#     os.environ["CHROMA_HUGGINGFACE_API_KEY"] = "not_needed"
+# Global RAG engine instance (dynamic session initialization)
+_RAG_ENGINE: Optional[HybridRAG] = None
 
 
+def get_rag_engine(collection_name: str = "academic_research") -> HybridRAG:
+    """Singleton getter for the persistent hybrid RAG engine."""
+    global _RAG_ENGINE
+    if _RAG_ENGINE is None or _RAG_ENGINE.collection_name != collection_name:
+        _RAG_ENGINE = HybridRAG(collection_name=collection_name)
+    return _RAG_ENGINE
 
-# IMPORTANT: Remove the "not_needed" dummy keys. 
-# If the tool sees 'OPENAI_API_KEY', it often tries to use it.
-# If using HuggingFace, it's better to leave the OpenAI key unset.
 
-import os
-from crewai_tools import RagTool
+def reset_rag_engine(collection_name: str = "academic_research") -> HybridRAG:
+    """Explicitly reset the active RAG engine for a fresh research session."""
+    global _RAG_ENGINE
+    _RAG_ENGINE = HybridRAG(collection_name=collection_name)
+    return _RAG_ENGINE
 
-# 1. Satisfy the Pydantic validator's hunger for an OpenAI key
-# We set this to 'dummy' just to pass the initialization check.
 
-rag_tool = RagTool(
-    config={
-        "llm": {
-            "provider": "groq",
-            "config": {
-                "model": "llama-3.1-8b-instant",
-                "temperature": 0,
-            }
-        },
-        "embedder": {
-            "provider": "huggingface",
-            "config": {
-                "model": "sentence-transformers/all-MiniLM-L6-v2",
-            }
-        },
-        "vector_store": {
-            "provider": "chroma",
-            "config": {
-                "dir": "db_healthcare_research",
-                "collection_name": "healthcare_rag"
-            }
-        }
-    }
-)
+@tool("academic_hybrid_rag_tool")
+def rag_tool(query: str) -> str:
+    """
+    Search the ingested academic research papers using Hybrid Search (Dense Vector + BM25 Lexical).
+    Returns grounded excerpts with verified page numbers and source titles for citation.
+
+    Input:
+    - query: Specific technical research question, e.g. 'What datasets were used in the evaluation?' or 'What are the main methodology limitations?'
+
+    Output:
+    - Grounded textual excerpts from the papers with [Source: ... | Page: ...] citations.
+    """
+    engine = get_rag_engine()
+    results = engine.search(query=query, top_k=5)
+    return engine.format_citation_context(results)
