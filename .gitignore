@@ -4,6 +4,7 @@ __pycache__/
 venv/
 db_healthcare_research/
 chroma_db/
+chroma_db_eval/
 temp_papers/
 reports/
 .pytest_cache/
