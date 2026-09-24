@@ -4,16 +4,28 @@ from datetime import datetime
 import streamlit as st
 from dotenv import load_dotenv
 
-from crew import run_research, REPORTS_DIR
-
-load_dotenv()
-
+# Set page configuration must be the first Streamlit command
 st.set_page_config(
     page_title="Agentic AI Academic Researcher",
     page_icon="📚",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Load environment variables
+load_dotenv()
+
+# Synchronize Streamlit Secrets to os.environ for Cloud Deployments
+try:
+    if hasattr(st, "secrets"):
+        for k, v in st.secrets.items():
+            if isinstance(v, str) and k not in os.environ:
+                os.environ[k] = v
+except Exception:
+    pass
+
+REPORTS_DIR = "reports"
+os.makedirs(REPORTS_DIR, exist_ok=True)
 
 # Custom Styling
 st.markdown("""
@@ -54,7 +66,16 @@ def load_past_reports():
 # Sidebar Configuration & Telemetry
 with st.sidebar:
     st.markdown("### ⚙️ System Telemetry")
-    groq_ready = bool(os.getenv("GROQ_API_KEY"))
+    groq_api_key = os.getenv("GROQ_API_KEY", "")
+
+    # Allow direct API key entry if not already set via environment or secrets
+    if not groq_api_key:
+        user_key = st.text_input("Enter Groq API Key:", type="password", help="Get a free key at console.groq.com")
+        if user_key:
+            os.environ["GROQ_API_KEY"] = user_key
+            groq_api_key = user_key
+
+    groq_ready = bool(groq_api_key)
     st.markdown(
         f"<div class='badge-card'><b>LLM Engine:</b> LLaMA-3.3-70B (Groq)<br>"
         f"<b>Status:</b> {'🟢 Online' if groq_ready else '🔴 Missing Key'}</div>",
@@ -120,9 +141,14 @@ query_input = st.text_input(
 launch_btn = st.button("🚀 Launch Autonomous Research Crew", type="primary", use_container_width=True)
 
 if launch_btn:
-    if not query_input.strip():
+    if not os.getenv("GROQ_API_KEY"):
+        st.error("Please provide a valid GROQ_API_KEY in the sidebar or via Streamlit Secrets before launching.")
+    elif not query_input.strip():
         st.warning("Please enter a research topic before launching the crew.")
     else:
+        # Lazy import of crew pipeline to ensure environment variables are populated
+        from crew import run_research
+
         st.info(f"Initiating multi-agent literature review for: **{query_input.strip()}**")
 
         progress_placeholder = st.empty()
