@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+.env
+chroma_db/
+chroma_db_eval/
+temp_papers/
+reports/
+.git/
+.gitignore
