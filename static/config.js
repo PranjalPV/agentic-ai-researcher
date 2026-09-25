@@ -3,7 +3,7 @@
 // ====================================================================
 // When deploying your frontend separately on Render (Static Site),
 // paste your Render Backend Web Service URL below:
-const PRODUCTION_BACKEND_URL = "https://agentic-ai-researcher.onrender.com";
+const PRODUCTION_BACKEND_URL = "https://agentic-ai-researcher-2w48.onrender.com";
 
 window.APP_CONFIG = {
     // Returns the appropriate backend URL based on environment
