@@ -121,21 +121,28 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Suggested Query Chips
-st.markdown("**Quick Topics:**")
-col1, col2, col3 = st.columns(3)
-quick_query = None
-if col1.button("⚡ Direct Preference Optimization in LLMs"):
-    quick_query = "Direct Preference Optimization vs RLHF for Large Language Model Alignment"
-if col2.button("🔬 Mechanistic Interpretability in Transformers"):
-    quick_query = "Mechanistic Interpretability of Attention Heads and Induction Heads in Transformers"
-if col3.button("🐍 State Space Models (Mamba) vs Attention"):
-    quick_query = "State Space Models Mamba versus Linear Attention Transformers for Long Sequences"
+# Initialize session state for persistent research output across reruns and downloads
+if "current_report" not in st.session_state:
+    st.session_state["current_report"] = None
+if "current_topic" not in st.session_state:
+    st.session_state["current_topic"] = None
+if "current_elapsed" not in st.session_state:
+    st.session_state["current_elapsed"] = None
+if "current_timestamp" not in st.session_state:
+    st.session_state["current_timestamp"] = None
 
+# Topic input with example prompt guidance
 query_input = st.text_input(
     "Enter Research Topic or Scientific Hypothesis:",
-    value=quick_query if quick_query else "",
-    placeholder="e.g., Parameter Efficient Fine Tuning LoRA vs QLoRA tradeoffs"
+    placeholder="e.g., Direct Preference Optimization vs RLHF for Large Language Models",
+    help="Enter any topic in AI, computer science, biology, or scientific literature."
+)
+st.caption(
+    "💡 **Example topics:** "
+    "`Direct Preference Optimization in LLMs` • "
+    "`Mechanistic Interpretability in Transformers` • "
+    "`State Space Models (Mamba) vs Attention` • "
+    "`LoRA vs QLoRA Tradeoffs`"
 )
 
 launch_btn = st.button("🚀 Launch Autonomous Research Crew", type="primary", use_container_width=True)
@@ -151,18 +158,12 @@ if launch_btn:
 
         st.info(f"Initiating multi-agent literature review for: **{query_input.strip()}**")
 
-        progress_placeholder = st.empty()
-        with progress_placeholder.container():
-            st.markdown("##### ⏳ Execution Progress")
-            status_box = st.status("Executing Multi-Agent Pipeline...", expanded=True)
-            with status_box:
-                st.write("🔍 **Phase 1:** Scouting arXiv & Semantic Scholar for peer-reviewed papers...")
-                time.sleep(1)
-                st.write("📥 **Phase 2:** Downloading open-access PDFs & indexing with layout-aware PyMuPDF...")
-                time.sleep(1)
-                st.write("⚖️ **Phase 3:** Extracting methodologies, datasets & running Reciprocal Rank Fusion...")
-                time.sleep(1)
-                st.write("💡 **Phase 4:** Synthesizing research gaps, scaling limits & future directions...")
+        status_box = st.status("Executing Multi-Agent Pipeline...", expanded=True)
+        with status_box:
+            st.write("🔍 **Phase 1:** Scouting arXiv & Semantic Scholar for peer-reviewed papers...")
+            st.write("📥 **Phase 2:** Downloading open-access PDFs & indexing with layout-aware PyMuPDF...")
+            st.write("⚖️ **Phase 3:** Extracting methodologies, datasets & running Reciprocal Rank Fusion...")
+            st.write("💡 **Phase 4:** Synthesizing research gaps, scaling limits & future directions...")
 
         start_time = time.time()
         try:
@@ -172,24 +173,40 @@ if launch_btn:
             elapsed = time.time() - start_time
             status_box.update(label=f"✅ Research Complete in {elapsed:.1f}s!", state="complete", expanded=False)
 
-            st.success(f"Investigation completed successfully in {elapsed:.1f} seconds!")
-
-            # Output Presentation Tabs
-            tab1, tab2 = st.tabs(["📄 Executive Research Dossier", "💾 Raw Markdown"])
-
-            with tab1:
-                st.markdown(report_content)
-
-            with tab2:
-                st.code(report_content, language="markdown")
-
-            st.download_button(
-                label="📥 Export Report as Markdown (.md)",
-                data=report_content,
-                file_name=f"research_{int(time.time())}.md",
-                mime="text/markdown"
-            )
+            # Persist in session state so it survives download button reruns
+            st.session_state["current_report"] = report_content
+            st.session_state["current_topic"] = query_input.strip()
+            st.session_state["current_elapsed"] = elapsed
+            st.session_state["current_timestamp"] = int(time.time())
 
         except Exception as e:
             status_box.update(label="❌ Pipeline Failed", state="error")
             st.error(f"Error during research execution: {e}")
+
+# Output Presentation Tabs (Persisted across downloads and interactions)
+if st.session_state.get("current_report"):
+    report_content = st.session_state["current_report"]
+    report_topic = st.session_state.get("current_topic", "Research Topic")
+    elapsed = st.session_state.get("current_elapsed", 0.0)
+    ts = st.session_state.get("current_timestamp", int(time.time()))
+
+    st.markdown("---")
+    st.success(f"Investigation completed successfully for **{report_topic}** ({elapsed:.1f} seconds)!")
+
+    tab1, tab2 = st.tabs(["📄 Executive Research Dossier", "💾 Raw Markdown"])
+
+    with tab1:
+        st.markdown(report_content)
+
+    with tab2:
+        st.code(report_content, language="markdown")
+
+    safe_name = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in report_topic[:25]).strip("_")
+    st.download_button(
+        label="📥 Export Report as Markdown (.md)",
+        data=report_content,
+        file_name=f"research_{safe_name}_{ts}.md",
+        mime="text/markdown",
+        key="download_current_report_btn"
+    )
+
