@@ -68,9 +68,33 @@ class JobStatusResponse(BaseModel):
     error: Optional[str] = None
 
 
+JOBS_FILE = os.path.join(REPORTS_DIR, "jobs_registry.json")
+
+
+def _load_persisted_jobs() -> Dict[str, Dict[str, Any]]:
+    if os.path.exists(JOBS_FILE):
+        try:
+            with open(JOBS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_persisted_job(job_id: str, data: Dict[str, Any]):
+    try:
+        jobs = _load_persisted_jobs()
+        jobs[job_id] = data
+        with open(JOBS_FILE, "w", encoding="utf-8") as f:
+            json.dump(jobs, f, indent=2)
+    except Exception:
+        pass
+
+
 def _execute_research_job(job_id: str, query: str, session_id: Optional[str], api_key: Optional[str] = None):
     """Target worker executed inside thread pool."""
     JOBS[job_id]["status"] = "running"
+    _save_persisted_job(job_id, JOBS[job_id])
     try:
         if api_key and api_key.strip():
             os.environ["GROQ_API_KEY"] = api_key.strip()
@@ -79,10 +103,12 @@ def _execute_research_job(job_id: str, query: str, session_id: Optional[str], ap
         JOBS[job_id]["status"] = "completed"
         JOBS[job_id]["result"] = result_text
         JOBS[job_id]["completed_at"] = datetime.now().isoformat()
+        _save_persisted_job(job_id, JOBS[job_id])
     except Exception as e:
         JOBS[job_id]["status"] = "failed"
         JOBS[job_id]["error"] = str(e)
         JOBS[job_id]["completed_at"] = datetime.now().isoformat()
+        _save_persisted_job(job_id, JOBS[job_id])
 
 
 @app.get("/health", tags=["System"])
@@ -141,6 +167,7 @@ def create_research_job(request: ResearchRequest, background_tasks: BackgroundTa
         "result": None,
         "error": None
     }
+    _save_persisted_job(job_id, JOBS[job_id])
 
     # Dispatch to background thread pool
     background_tasks.add_task(_execute_research_job, job_id, request.query.strip(), request.session_id, request.api_key)
@@ -159,7 +186,10 @@ def get_job_status(job_id: str):
     """Retrieves the live status and completed results of a research task."""
     job = JOBS.get(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job ID not found.")
+        persisted = _load_persisted_jobs()
+        job = persisted.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found.")
     return JobStatusResponse(**job)
 
 
