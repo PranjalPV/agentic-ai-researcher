@@ -200,9 +200,14 @@
                 <button id="closeConfigBtn" class="btn-close">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="modal-desc">Configure your Groq API Key to enable instant literature synthesis. On Render, you can also set this as an Environment Variable (<code>GROQ_API_KEY</code>).</p>
+                <p class="modal-desc">Configure your Render Backend URL and API credentials to connect the static frontend to your deployed research service.</p>
                 <div class="form-group">
-                    <label for="groqKeyInput">Groq API Key:</label>
+                    <label for="backendUrlInput">Backend Web Service URL (Render):</label>
+                    <input type="url" id="backendUrlInput" placeholder="https://your-backend.onrender.com" />
+                    <small>Enter your deployed FastAPI service URL from Render. (Leave blank if hosted together).</small>
+                </div>
+                <div class="form-group">
+                    <label for="groqKeyInput">Groq API Key (Optional override):</label>
                     <input type="password" id="groqKeyInput" placeholder="gsk_..." />
                     <small>Obtain a free key at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a></small>
                 </div>

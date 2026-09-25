@@ -7,6 +7,19 @@ let startTime = null;
 let currentReportText = "";
 let currentReportTopic = "";
 
+// Dynamic Backend URL resolution:
+// If Frontend is deployed as a standalone Render Static Site, it connects to the deployed Backend Web Service URL.
+let BACKEND_URL = localStorage.getItem("researcher_backend_url") || "";
+
+function getApiUrl(endpoint) {
+    if (!BACKEND_URL) {
+        return endpoint;
+    }
+    const cleanBase = BACKEND_URL.replace(/\/+$/, "");
+    const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    return `${cleanBase}${cleanEndpoint}`;
+}
+
 // DOM Elements
 const systemStatusEl = document.getElementById("systemStatus");
 const dossierCountEl = document.getElementById("dossierCount");
@@ -32,6 +45,7 @@ const openConfigBtn = document.getElementById("openConfigBtn");
 const closeConfigBtn = document.getElementById("closeConfigBtn");
 const configModal = document.getElementById("configModal");
 const saveConfigBtn = document.getElementById("saveConfigBtn");
+const backendUrlInput = document.getElementById("backendUrlInput");
 const groqKeyInput = document.getElementById("groqKeyInput");
 const configFeedback = document.getElementById("configFeedback");
 
@@ -133,6 +147,9 @@ function setupEventListeners() {
 
     // Config Modal Controls
     openConfigBtn.addEventListener("click", () => {
+        if (backendUrlInput) {
+            backendUrlInput.value = BACKEND_URL;
+        }
         configModal.classList.remove("hidden");
         configFeedback.textContent = "";
     });
@@ -142,13 +159,13 @@ function setupEventListeners() {
     });
 
     // Save Config
-    saveConfigBtn.addEventListener("click", saveApiKey);
+    saveConfigBtn.addEventListener("click", saveSettings);
 }
 
 // System Health Polling
 async function checkSystemHealth() {
     try {
-        const res = await fetch("/health");
+        const res = await fetch(getApiUrl("/health"));
         if (!res.ok) throw new Error("Health check failed");
         const data = await res.json();
 
@@ -163,7 +180,12 @@ async function checkSystemHealth() {
         }
     } catch (err) {
         systemStatusEl.className = "status-badge status-offline";
-        systemStatusEl.innerHTML = `<span class="dot"></span><span class="status-text">🔴 Server Disconnected</span>`;
+        systemStatusEl.innerHTML = `<span class="dot"></span><span class="status-text">🔴 Backend Disconnected</span>`;
+        
+        // If loaded on a static domain without a configured backend URL, nudge the user
+        if (!BACKEND_URL && window.location.hostname.includes("onrender.com")) {
+            showToast("⚠️ Configure your Render Backend URL in Settings", "warning");
+        }
     }
 }
 
@@ -192,7 +214,7 @@ async function startResearch(query) {
     }, 100);
 
     try {
-        const res = await fetch("/api/research", {
+        const res = await fetch(getApiUrl("/api/research"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query: query })
@@ -200,7 +222,7 @@ async function startResearch(query) {
 
         if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.detail || "Failed to start research task");
+            throw new Error(errData.detail || "Failed to start research task. Check backend connection.");
         }
 
         const data = await res.json();
@@ -231,7 +253,7 @@ function pollJobStatus(jobId) {
         progressStatusText.textContent = phaseMessages[stageIndex];
 
         try {
-            const res = await fetch(`/api/research/${jobId}`);
+            const res = await fetch(getApiUrl(`/api/research/${jobId}`));
             if (!res.ok) throw new Error("Status check failed");
             const job = await res.json();
 
@@ -303,7 +325,7 @@ function handleResearchError(errMsg) {
 // Stored Reports Drawer
 async function loadReportsList() {
     try {
-        const res = await fetch("/api/reports");
+        const res = await fetch(getApiUrl("/api/reports"));
         if (!res.ok) return;
         const reports = await res.json();
 
@@ -325,13 +347,13 @@ async function loadReportsList() {
         `).join("");
 
     } catch (err) {
-        reportsList.innerHTML = `<p class="empty-state">Failed to load stored dossiers.</p>`;
+        reportsList.innerHTML = `<p class="empty-state">No connection to stored dossiers.</p>`;
     }
 }
 
 async function loadReport(filename) {
     try {
-        const res = await fetch(`/api/reports/${filename}`);
+        const res = await fetch(getApiUrl(`/api/reports/${filename}`));
         if (!res.ok) throw new Error("Could not retrieve report");
         const data = await res.json();
 
@@ -370,38 +392,47 @@ function closeDrawer() {
     drawerOverlay.classList.add("hidden");
 }
 
-// API Key Configuration
-async function saveApiKey() {
+// Settings & API Configuration
+async function saveSettings() {
+    const backendUrl = backendUrlInput ? backendUrlInput.value.trim() : "";
     const key = groqKeyInput.value.trim();
-    if (!key) {
-        configFeedback.className = "feedback-msg error";
-        configFeedback.textContent = "Please enter a valid key.";
-        return;
+
+    // 1. Update Backend URL in localStorage
+    if (backendUrl) {
+        localStorage.setItem("researcher_backend_url", backendUrl);
+        BACKEND_URL = backendUrl;
+    } else if (backendUrl === "") {
+        localStorage.removeItem("researcher_backend_url");
+        BACKEND_URL = "";
     }
 
-    try {
-        const res = await fetch("/api/config", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ groq_api_key: key })
-        });
+    // 2. If API Key provided, push to backend
+    if (key) {
+        try {
+            const res = await fetch(getApiUrl("/api/config"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ groq_api_key: key })
+            });
 
-        if (!res.ok) throw new Error("Failed to save key");
-        
-        configFeedback.className = "feedback-msg success";
-        configFeedback.textContent = "Key saved successfully!";
-        groqKeyInput.value = "";
-        
-        setTimeout(() => {
-            configModal.classList.add("hidden");
-            checkSystemHealth();
-            showToast("Groq API key activated", "success");
-        }, 1000);
-
-    } catch (err) {
-        configFeedback.className = "feedback-msg error";
-        configFeedback.textContent = err.message;
+            if (!res.ok) throw new Error("Failed to save key on backend");
+            groqKeyInput.value = "";
+        } catch (err) {
+            configFeedback.className = "feedback-msg error";
+            configFeedback.textContent = `Error saving key: ${err.message}`;
+            return;
+        }
     }
+
+    configFeedback.className = "feedback-msg success";
+    configFeedback.textContent = "Settings saved successfully!";
+    
+    setTimeout(() => {
+        configModal.classList.add("hidden");
+        checkSystemHealth();
+        loadReportsList();
+        showToast("Settings updated & reconnected", "success");
+    }, 800);
 }
 
 // Toast Notifications
