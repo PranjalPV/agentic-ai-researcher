@@ -24,7 +24,6 @@ REPORTS_DIR = "reports"
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
 # Pre-configured Crew instance for direct imports
-# max_rpm=2 enforces a 30s pause between requests, strictly adhering to Groq free-tier 1000 OTPM limits
 crew = Crew(
     agents=[
         research_agent,
@@ -39,8 +38,7 @@ crew = Crew(
         insight_task
     ],
     process=Process.sequential,
-    verbose=True,
-    max_rpm=2
+    verbose=True
 )
 
 

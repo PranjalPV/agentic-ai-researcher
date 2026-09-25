@@ -211,12 +211,13 @@ async function startResearch(query) {
 // Poll Job Status
 function pollJobStatus(jobId) {
     let pollCount = 0;
+    let consecutiveNetworkErrors = 0;
     clearInterval(pollInterval);
 
     pollInterval = setInterval(async () => {
         pollCount++;
         // Update visual stepper based on elapsed stages
-        const stageIndex = Math.min(Math.floor(pollCount / 3), 3);
+        const stageIndex = Math.min(Math.floor(pollCount / 4), 3);
         steps.forEach((s, idx) => {
             if (idx < stageIndex) s.className = "step-item completed";
             else if (idx === stageIndex) s.className = "step-item active";
@@ -226,7 +227,15 @@ function pollJobStatus(jobId) {
 
         try {
             const res = await fetch(getApiUrl(`/api/research/${jobId}`));
-            if (!res.ok) throw new Error("Status check failed");
+            if (!res.ok) {
+                consecutiveNetworkErrors++;
+                if (consecutiveNetworkErrors > 20) {
+                    throw new Error(`Server returned HTTP ${res.status}`);
+                }
+                return; // Temporary blip, retry next tick
+            }
+            
+            consecutiveNetworkErrors = 0; // Reset counter on successful check
             const job = await res.json();
 
             if (job.status === "completed") {
@@ -239,11 +248,11 @@ function pollJobStatus(jobId) {
                 handleResearchError(job.error || "Autonomous research execution failed.");
             }
         } catch (err) {
-            // Keep polling unless persistent failure
-            if (pollCount > 120) { // 4 minutes timeout
+            consecutiveNetworkErrors++;
+            if (consecutiveNetworkErrors > 20 || pollCount > 450) { // 15 minutes limit
                 clearInterval(pollInterval);
                 clearInterval(timerInterval);
-                handleResearchError("Job polling timed out.");
+                handleResearchError(err.message || "Connection to research server lost.");
             }
         }
     }, 2000);
