@@ -6,6 +6,8 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from crew import run_research, REPORTS_DIR
@@ -30,9 +32,14 @@ executor = ThreadPoolExecutor(max_workers=3)
 JOBS: Dict[str, Dict[str, Any]] = {}
 
 
+class ConfigRequest(BaseModel):
+    groq_api_key: str = Field(..., description="Groq API Key to configure in runtime")
+
+
 class ResearchRequest(BaseModel):
     query: str = Field(..., description="Research topic or scientific inquiry")
     session_id: Optional[str] = Field(default=None, description="Optional custom session identifier")
+    api_key: Optional[str] = Field(default=None, description="Optional Groq API Key override")
 
 
 class ResearchJobResponse(BaseModel):
@@ -53,10 +60,12 @@ class JobStatusResponse(BaseModel):
     error: Optional[str] = None
 
 
-def _execute_research_job(job_id: str, query: str, session_id: Optional[str]):
+def _execute_research_job(job_id: str, query: str, session_id: Optional[str], api_key: Optional[str] = None):
     """Target worker executed inside thread pool."""
     JOBS[job_id]["status"] = "running"
     try:
+        if api_key and api_key.strip():
+            os.environ["GROQ_API_KEY"] = api_key.strip()
         result_text = run_research(query=query, save_report=True, session_id=session_id)
         JOBS[job_id]["status"] = "completed"
         JOBS[job_id]["result"] = result_text
@@ -72,14 +81,25 @@ def health_check():
     """System health check and environmental status."""
     has_groq = bool(os.getenv("GROQ_API_KEY"))
     has_openai = bool(os.getenv("OPENAI_API_KEY"))
+    report_count = len([f for f in os.listdir(REPORTS_DIR) if f.endswith(".md")]) if os.path.exists(REPORTS_DIR) else 0
     return {
         "status": "healthy",
         "service": "Agentic AI Academic Researcher",
         "version": "2.0.0",
         "groq_configured": has_groq,
         "openai_configured": has_openai,
-        "reports_available": len(os.listdir(REPORTS_DIR)) if os.path.exists(REPORTS_DIR) else 0
+        "reports_available": report_count
     }
+
+
+@app.post("/api/config", tags=["System"])
+def set_config(config: ConfigRequest):
+    """Configures or updates runtime credentials."""
+    key = config.groq_api_key.strip()
+    if not key:
+        raise HTTPException(status_code=400, detail="API key cannot be empty.")
+    os.environ["GROQ_API_KEY"] = key
+    return {"status": "success", "message": "Groq API Key successfully configured in runtime."}
 
 
 @app.post("/api/research", response_model=ResearchJobResponse, tags=["Research Engine"])
@@ -90,6 +110,15 @@ def create_research_job(request: ResearchRequest, background_tasks: BackgroundTa
     """
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="Research query cannot be empty.")
+
+    if request.api_key and request.api_key.strip():
+        os.environ["GROQ_API_KEY"] = request.api_key.strip()
+
+    if not os.getenv("GROQ_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+        raise HTTPException(
+            status_code=400,
+            detail="GROQ_API_KEY is not set. Please provide it in the UI settings or configure it in your environment."
+        )
 
     job_id = f"job_{uuid.uuid4().hex[:10]}"
     now = datetime.now().isoformat()
@@ -105,7 +134,7 @@ def create_research_job(request: ResearchRequest, background_tasks: BackgroundTa
     }
 
     # Dispatch to background thread pool
-    background_tasks.add_task(_execute_research_job, job_id, request.query.strip(), request.session_id)
+    background_tasks.add_task(_execute_research_job, job_id, request.query.strip(), request.session_id, request.api_key)
 
     return ResearchJobResponse(
         job_id=job_id,
@@ -156,3 +185,24 @@ def get_report_content(filename: str):
         content = f.read()
 
     return {"filename": safe_name, "content": content}
+
+
+# Mount Static Frontend
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def serve_frontend():
+    """Serves the Single Page Application interface."""
+    index_file = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {"message": "Agentic AI Academic Researcher API is online. Frontend static files not found."}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("api:app", host="0.0.0.0", port=port, reload=False)

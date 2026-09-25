@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic AI Academic Researcher 2.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Marked.js for fast, safe markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="brand">
+                <span class="brand-icon">📚</span>
+                <div>
+                    <h1 class="brand-title">Agentic AI Academic Researcher <span class="version-tag">v2.0</span></h1>
+                    <p class="brand-subtitle">Autonomous Multi-Agent Literature Discovery & Layout-Aware Hybrid RAG</p>
+                </div>
+            </div>
+            <div class="nav-actions">
+                <div id="systemStatus" class="status-badge status-loading">
+                    <span class="dot"></span>
+                    <span class="status-text">Checking System...</span>
+                </div>
+                <button id="openConfigBtn" class="btn btn-secondary btn-sm" title="Configure API Key">
+                    ⚙️ Settings
+                </button>
+                <button id="toggleDrawerBtn" class="btn btn-secondary btn-sm" title="View Past Reports">
+                    📂 Stored Dossiers (<span id="dossierCount">0</span>)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- Hero & Inquiry Input Box -->
+        <section class="card input-card">
+            <h2 class="section-title">Launch Research Inquiry</h2>
+            <p class="section-desc">Submit any scientific hypothesis, machine learning concept, or literature survey question. The multi-agent crew will scout arXiv, retrieve papers, ingest full-text PDFs with PyMuPDF, run Hybrid RAG, and synthesize a structured comparative review.</p>
+
+            <form id="researchForm" class="research-form">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="queryInput" 
+                        placeholder="e.g., Direct Preference Optimization vs RLHF for Large Language Model Alignment" 
+                        autocomplete="off"
+                        required
+                    />
+                    <button type="submit" id="submitBtn" class="btn btn-primary">
+                        🚀 Launch Autonomous Research Crew
+                    </button>
+                </div>
+            </form>
+
+            <!-- Suggested Topics -->
+            <div class="chips-container">
+                <span class="chips-label">💡 Suggested Topics:</span>
+                <button class="chip" data-query="Direct Preference Optimization vs RLHF for Large Language Model Alignment">
+                    ⚡ Direct Preference Optimization in LLMs
+                </button>
+                <button class="chip" data-query="Mechanistic Interpretability of Attention Heads and Induction Heads in Transformers">
+                    🔬 Mechanistic Interpretability in Transformers
+                </button>
+                <button class="chip" data-query="State Space Models Mamba versus Linear Attention Transformers for Long Sequences">
+                    🐍 State Space Models (Mamba) vs Attention
+                </button>
+                <button class="chip" data-query="Parameter-Efficient Fine-Tuning LoRA vs QLoRA tradeoffs and quantization limits">
+                    ⚖️ LoRA vs QLoRA Tradeoffs
+                </button>
+            </div>
+        </section>
+
+        <!-- Live Execution Stepper (Hidden by Default) -->
+        <section id="progressSection" class="card progress-card hidden">
+            <div class="progress-header">
+                <div>
+                    <h3 class="progress-title">⏳ Multi-Agent Execution in Progress...</h3>
+                    <p class="progress-subtitle" id="progressStatusText">Scouting arXiv & Semantic Scholar for literature...</p>
+                </div>
+                <div class="timer-badge">
+                    ⏱️ Elapsed: <span id="timerDisplay">0.0s</span>
+                </div>
+            </div>
+
+            <!-- Stepper visualization -->
+            <div class="stepper">
+                <div class="step-item active" id="step1">
+                    <div class="step-icon">🔍</div>
+                    <div class="step-content">
+                        <div class="step-title">Literature Scout</div>
+                        <div class="step-desc">Querying arXiv & Semantic Scholar</div>
+                    </div>
+                </div>
+                <div class="step-item" id="step2">
+                    <div class="step-icon">📥</div>
+                    <div class="step-content">
+                        <div class="step-title">Ingestion & RAG</div>
+                        <div class="step-desc">PyMuPDF chunking & ChromaDB indexing</div>
+                    </div>
+                </div>
+                <div class="step-item" id="step3">
+                    <div class="step-icon">⚖️</div>
+                    <div class="step-content">
+                        <div class="step-title">Comparative Analyst</div>
+                        <div class="step-desc">Reciprocal Rank Fusion & benchmark extraction</div>
+                    </div>
+                </div>
+                <div class="step-item" id="step4">
+                    <div class="step-icon">💡</div>
+                    <div class="step-content">
+                        <div class="step-title">Research Strategist</div>
+                        <div class="step-desc">Executive synthesis & research gap mapping</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Result Presentation Section (Hidden by Default) -->
+        <section id="resultSection" class="card result-card hidden">
+            <div class="result-header">
+                <div>
+                    <span class="badge badge-success" id="resultStatusBadge">✅ Research Complete</span>
+                    <h2 class="result-topic" id="resultTopic">Research Topic</h2>
+                    <p class="result-meta" id="resultMeta">Generated in 0.0s</p>
+                </div>
+                <div class="result-actions">
+                    <button id="copyBtn" class="btn btn-secondary btn-sm" title="Copy raw Markdown to clipboard">
+                        📋 Copy Markdown
+                    </button>
+                    <button id="downloadBtn" class="btn btn-primary btn-sm" title="Download report as .md file">
+                        📥 Download Dossier (.md)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs-nav">
+                <button class="tab-btn active" data-tab="tabRendered">📄 Executive Research Dossier</button>
+                <button class="tab-btn" data-tab="tabRaw">💾 Raw Markdown</button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-panels">
+                <div id="tabRendered" class="tab-panel active markdown-body">
+                    <!-- Formatted HTML Markdown rendered here -->
+                </div>
+                <div id="tabRaw" class="tab-panel">
+                    <pre><code id="rawMarkdownCode"></code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- System Architecture Footer Badges -->
+        <footer class="tech-stack-footer">
+            <div class="badge-item">
+                <span class="badge-icon">🧠</span>
+                <span><b>LLM:</b> Qwen 3.8 27B / Groq</span>
+            </div>
+            <div class="badge-item">
+                <span class="badge-icon">⚡</span>
+                <span><b>RAG:</b> PyMuPDF + ChromaDB + BM25Okapi + RRF (k=60)</span>
+            </div>
+            <div class="badge-item">
+                <span class="badge-icon">🤖</span>
+                <span><b>CrewAI:</b> 4 Autonomous Cooperating Agents</span>
+            </div>
+            <div class="badge-item">
+                <span class="badge-icon">🌐</span>
+                <span><b>Architecture:</b> FastAPI Asynchronous Backend</span>
+            </div>
+        </footer>
+    </main>
+
+    <!-- Slide-in Drawer for Past Stored Dossiers -->
+    <div id="drawerOverlay" class="drawer-overlay hidden"></div>
+    <aside id="reportsDrawer" class="reports-drawer hidden">
+        <div class="drawer-header">
+            <h3>📂 Stored Dossiers</h3>
+            <button id="closeDrawerBtn" class="btn-close">&times;</button>
+        </div>
+        <div class="drawer-body">
+            <div id="reportsList" class="reports-list">
+                <p class="empty-state">Loading stored dossiers...</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Settings Modal -->
+    <div id="configModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>⚙️ System Configuration</h3>
+                <button id="closeConfigBtn" class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc">Configure your Groq API Key to enable instant literature synthesis. On Render, you can also set this as an Environment Variable (<code>GROQ_API_KEY</code>).</p>
+                <div class="form-group">
+                    <label for="groqKeyInput">Groq API Key:</label>
+                    <input type="password" id="groqKeyInput" placeholder="gsk_..." />
+                    <small>Obtain a free key at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a></small>
+                </div>
+                <div id="configFeedback" class="feedback-msg"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveConfigBtn" class="btn btn-primary">Save Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

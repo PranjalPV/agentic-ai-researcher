@@ -64,16 +64,16 @@ flowchart TD
   * `PaperComparisonItem`: Standardized dimensions (Methodology, Datasets, Results, Strengths, Limitations).
   * `StrategicInsights`: Unresolved research gaps and high-impact future directions.
 
-### 5. Multi-Surface Deployment
+### 5. Unified Full-Stack Architecture
 * **CLI Runner (`app.py`):** Fast terminal execution with argument parsing and execution timing.
-* **FastAPI Backend (`api.py`):** Asynchronous background job worker with endpoints for health checks, job dispatch, polling, and report retrieval.
-* **Streamlit UI (`ui.py`):** Interactive researcher dashboard featuring suggestion chips, live execution phase steppers, and one-click Markdown downloads.
+* **FastAPI Full-Stack Service (`api.py`):** Asynchronous background job worker with REST endpoints for health checks, job dispatch, polling, and report retrieval, serving an embedded responsive Single Page Application.
+* **Web UI (`static/`):** Fast, modern, responsive frontend featuring instant suggested chips, live multi-phase execution steppers, client-side Blob Markdown export, and stored dossier management.
 
 ---
 
 ## 📊 Evaluation & Benchmark Suite
 
-An automated retrieval evaluation suite is provided in [`eval/evaluate_rag.py`](file:///D:/PV/agentic-ai-researcher/eval/evaluate_rag.py), measuring **Hit Rate @ 3**, **Mean Reciprocal Rank (MRR)**, and **Latency (ms)** on academic literature queries:
+An automated retrieval evaluation suite is provided in [`eval/evaluate_rag.py`](eval/evaluate_rag.py), measuring **Hit Rate @ 3**, **Mean Reciprocal Rank (MRR)**, and **Latency (ms)** on academic literature queries:
 
 | Retrieval Strategy | Hit Rate @ 3 | MRR | Avg Latency (ms) | Key Benefit |
 | :--- | :---: | :---: | :---: | :--- |
@@ -105,26 +105,45 @@ GROQ_API_KEY=your_groq_api_key_here
 # OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-### 3. Run via CLI
+### 3. Launch Full-Stack Web Application
+```bash
+uvicorn api:app --reload --port 8000
+```
+Open your browser at:
+* **Interactive Web Studio:** `http://localhost:8000/`
+* **Swagger OpenAPI Docs:** `http://localhost:8000/docs`
+
+### 4. Run via CLI
 ```bash
 python app.py --query "Direct Preference Optimization vs RLHF in LLMs"
 ```
 
-### 4. Run Interactive Web Dashboard
-```bash
-streamlit run ui.py
-```
-
-### 5. Launch FastAPI Backend
-```bash
-uvicorn api:app --reload --port 8000
-```
-Interactive Swagger API docs available at `http://localhost:8000/docs`.
-
-### 6. Run Evaluation Benchmarks
+### 5. Run Evaluation Benchmarks
 ```bash
 python eval/evaluate_rag.py
 ```
+
+---
+
+## ☁️ Deployment on Render
+
+This project is pre-configured with [`render.yaml`](render.yaml) and [`Procfile`](Procfile) for deployment on Render as a **Web Service**:
+
+1. **Push to GitHub:** Push this repository to your GitHub account.
+2. **Create New Web Service on Render:**
+   - Log into [Render Dashboard](https://dashboard.render.com/).
+   - Click **New +** $\rightarrow$ **Web Service**.
+   - Connect your GitHub repository `agentic-ai-researcher`.
+3. **Configure Service Settings:**
+   - **Environment:** `Python`
+   - **Region:** `Oregon` (or closest to you)
+   - **Branch:** `main`
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn api:app --host 0.0.0.0 --port $PORT`
+4. **Environment Variables:**
+   - Add `GROQ_API_KEY` = your Groq API Key (`gsk_...`).
+   - Add `PYTHON_VERSION` = `3.11.0`
+5. **Deploy:** Click **Deploy Web Service**. Render builds and hosts both your interactive Web UI and FastAPI endpoints on a single public URL (`https://your-service.onrender.com`).
 
 ---
 
@@ -135,7 +154,7 @@ agentic-ai-researcher/
 ├── agents/
 │   └── agents.py              # 4 specialized CrewAI agents with anti-hallucination backstories
 ├── config/
-│   └── llm.py                 # Enterprise LLM factory (Groq LLaMA-3.3-70B / LLaMA-3.1-8B)
+│   └── llm.py                 # Enterprise LLM factory (Groq Qwen 3.8 27B / LLaMA)
 ├── eval/
 │   └── evaluate_rag.py        # RAG benchmarking suite (Hit Rate, MRR, Latency)
 ├── rag/
@@ -144,6 +163,10 @@ agentic-ai-researcher/
 ├── schemas/
 │   ├── __init__.py
 │   └── research_models.py     # Pydantic v2 data models for inter-agent communication
+├── static/
+│   ├── index.html             # Responsive Single Page Application frontend
+│   ├── style.css              # Modern UI styling & typography
+│   └── app.js                 # Asynchronous job polling & client-side export
 ├── tasks/
 │   └── tasks.py               # Explicit task context pipelines and rubrics
 ├── tools/
@@ -152,9 +175,10 @@ agentic-ai-researcher/
 │   ├── pdf_ingestion_tool.py  # Binary PDF streaming with magic-byte validation
 │   └── rag_ingestion_tool.py  # Layout-aware vector store indexer
 ├── app.py                     # CLI entrypoint with execution metrics
-├── api.py                     # Asynchronous FastAPI web service
-├── ui.py                      # Interactive Streamlit researcher dashboard
+├── api.py                     # Unified FastAPI backend & static web server
 ├── crew.py                    # Crew orchestration and report persistence
+├── Procfile                   # Process entrypoint for Render
+├── render.yaml                # Render Blueprint deployment definition
 ├── requirements.txt           # Production dependencies
 └── README.md                  # System documentation
 ```

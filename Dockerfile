@@ -18,11 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application source code
 COPY . .
 
-# Expose ports: 8501 for Streamlit UI, 8000 for FastAPI
-EXPOSE 8501
+# Expose port 8000 for FastAPI + Web UI (Render overrides with $PORT)
 EXPOSE 8000
 
 ENV PYTHONUNBUFFERED=1
 
-# Default command starts the Streamlit researcher dashboard
-CMD ["streamlit", "run", "ui.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Start the full-stack web service (FastAPI + embedded SPA UI)
+CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"]

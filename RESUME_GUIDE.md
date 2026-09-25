@@ -10,11 +10,11 @@ This guide provides ready-to-use resume bullet points, elevator pitches, and ans
 Use these tailored bullets under your **Projects** section. Choose the 3-4 bullets that best fit your resume's length:
 
 ```markdown
-**Autonomous Agentic Academic Research Engine** | *CrewAI, LLaMA-3.3-70B, Hybrid RAG, ChromaDB, FastAPI, Streamlit*
+**Autonomous Agentic Academic Research Engine** | *CrewAI, Groq LLM, Hybrid RAG, ChromaDB, FastAPI, Render*
 • Engineered a multi-agent literature research system orchestrating 4 specialized agents to scout, download, index, and systematically compare preprints across arXiv and Semantic Scholar.
 • Designed a layout-aware Hybrid RAG engine combining Dense vector search (all-MiniLM-L6-v2) and Sparse lexical search (BM25) via Reciprocal Rank Fusion (RRF, k=60), achieving a 1.000 Hit Rate@3 and 13ms average latency.
 • Mitigated vector pollution by architecting dynamic session-scoped ChromaDB collections and strict Pydantic v2 data contracts, eliminating inter-topic hallucination.
-• Deployed an asynchronous FastAPI backend and interactive Streamlit dashboard featuring live pipeline execution stages, executive dossier rendering, and verifiable page-level citation grounding.
+• Deployed an asynchronous FastAPI backend and responsive Single Page Application on Render featuring live pipeline execution steppers, executive dossier rendering, and verifiable page-level citation grounding.
 ```
 
 ---
@@ -23,7 +23,7 @@ Use these tailored bullets under your **Projects** section. Choose the 3-4 bulle
 
 > *"In my project, I built an Autonomous Multi-Agent Academic Literature Intelligence Engine using CrewAI, Groq, and ChromaDB. The problem with existing AI research assistants is that they either hallucinate papers or use naive vector search that misses exact technical acronyms like LoRA or DPO in dense papers.  
 > To solve this, I designed a 4-agent pipeline with specialized personas that discovers papers from arXiv and Semantic Scholar, extracts PDFs using PyMuPDF page-by-page, and indexes them into a Hybrid RAG system combining dense embeddings and BM25 using Reciprocal Rank Fusion.  
-> It generates structured comparative matrices and uncovers open research gaps with verified page-level citations, accessible through both an asynchronous FastAPI backend and a Streamlit dashboard."*
+> It generates structured comparative matrices and uncovers open research gaps with verified page-level citations, deployed as a production-grade asynchronous FastAPI service and interactive web application on Render."*
 
 ---
 
@@ -75,4 +75,4 @@ Use these tailored bullets under your **Projects** section. Choose the 3-4 bulle
 * **RAG & Search:** Hybrid Search, Reciprocal Rank Fusion (RRF), BM25, ChromaDB, Sentence-Transformers, Vector Embeddings
 * **Document Processing:** PyMuPDF, Layout-aware chunking, Citation Grounding
 * **LLMs & APIs:** Groq LLaMA-3.3-70B, arXiv API, Semantic Scholar API
-* **Backend & Web:** FastAPI, Streamlit, Pydantic v2, Asynchronous Python, Uvicorn, REST APIs
+* **Backend & Web:** FastAPI, Single Page Application (HTML5/CSS3/Vanilla JS), Pydantic v2, Asynchronous Python, Uvicorn, REST APIs, Render Cloud
