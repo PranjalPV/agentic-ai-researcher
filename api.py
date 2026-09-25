@@ -204,6 +204,22 @@ def serve_frontend():
     return {"message": "Agentic AI Academic Researcher API is online. Frontend static files not found."}
 
 
+@app.get("/{filename}.js", include_in_schema=False)
+def serve_root_js(filename: str):
+    fpath = os.path.join(STATIC_DIR, f"{filename}.js")
+    if os.path.exists(fpath):
+        return FileResponse(fpath, media_type="application/javascript")
+    raise HTTPException(status_code=404)
+
+
+@app.get("/{filename}.css", include_in_schema=False)
+def serve_root_css(filename: str):
+    fpath = os.path.join(STATIC_DIR, f"{filename}.css")
+    if os.path.exists(fpath):
+        return FileResponse(fpath, media_type="text/css")
+    raise HTTPException(status_code=404)
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))

@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="style.css">
     <!-- Marked.js for fast, safe markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -27,9 +27,6 @@
                     <span class="dot"></span>
                     <span class="status-text">Checking System...</span>
                 </div>
-                <button id="openConfigBtn" class="btn btn-secondary btn-sm" title="Configure API Key">
-                    ⚙️ Settings
-                </button>
                 <button id="toggleDrawerBtn" class="btn btn-secondary btn-sm" title="View Past Reports">
                     📂 Stored Dossiers (<span id="dossierCount">0</span>)
                 </button>
@@ -192,36 +189,11 @@
         </div>
     </aside>
 
-    <!-- Settings Modal -->
-    <div id="configModal" class="modal-overlay hidden">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3>⚙️ System Configuration</h3>
-                <button id="closeConfigBtn" class="btn-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="modal-desc">Configure your Render Backend URL and API credentials to connect the static frontend to your deployed research service.</p>
-                <div class="form-group">
-                    <label for="backendUrlInput">Backend Web Service URL (Render):</label>
-                    <input type="url" id="backendUrlInput" placeholder="https://your-backend.onrender.com" />
-                    <small>Enter your deployed FastAPI service URL from Render. (Leave blank if hosted together).</small>
-                </div>
-                <div class="form-group">
-                    <label for="groqKeyInput">Groq API Key (Optional override):</label>
-                    <input type="password" id="groqKeyInput" placeholder="gsk_..." />
-                    <small>Obtain a free key at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a></small>
-                </div>
-                <div id="configFeedback" class="feedback-msg"></div>
-            </div>
-            <div class="modal-footer">
-                <button id="saveConfigBtn" class="btn btn-primary">Save Key</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Toast Notification Container -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <script src="/static/app.js"></script>
+    <!-- Production App Configuration & Controller -->
+    <script src="config.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

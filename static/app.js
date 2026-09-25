@@ -1,4 +1,4 @@
-// Agentic AI Academic Researcher 2.0 - Frontend Controller
+// Agentic AI Academic Researcher 2.0 - Production Frontend Controller
 
 let currentJobId = null;
 let pollInterval = null;
@@ -7,15 +7,15 @@ let startTime = null;
 let currentReportText = "";
 let currentReportTopic = "";
 
-// Dynamic Backend URL resolution:
-// If Frontend is deployed as a standalone Render Static Site, it connects to the deployed Backend Web Service URL.
-let BACKEND_URL = localStorage.getItem("researcher_backend_url") || "";
-
+// Dynamic API URL resolver from window.APP_CONFIG (configured in config.js)
 function getApiUrl(endpoint) {
-    if (!BACKEND_URL) {
+    const base = window.APP_CONFIG && typeof window.APP_CONFIG.getBackendUrl === "function"
+        ? window.APP_CONFIG.getBackendUrl()
+        : "";
+    if (!base) {
         return endpoint;
     }
-    const cleanBase = BACKEND_URL.replace(/\/+$/, "");
+    const cleanBase = base.replace(/\/+$/, "");
     const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
     return `${cleanBase}${cleanEndpoint}`;
 }
@@ -41,13 +41,6 @@ const closeDrawerBtn = document.getElementById("closeDrawerBtn");
 const reportsDrawer = document.getElementById("reportsDrawer");
 const drawerOverlay = document.getElementById("drawerOverlay");
 const reportsList = document.getElementById("reportsList");
-const openConfigBtn = document.getElementById("openConfigBtn");
-const closeConfigBtn = document.getElementById("closeConfigBtn");
-const configModal = document.getElementById("configModal");
-const saveConfigBtn = document.getElementById("saveConfigBtn");
-const backendUrlInput = document.getElementById("backendUrlInput");
-const groqKeyInput = document.getElementById("groqKeyInput");
-const configFeedback = document.getElementById("configFeedback");
 
 // Step elements
 const steps = [
@@ -144,22 +137,6 @@ function setupEventListeners() {
     toggleDrawerBtn.addEventListener("click", openDrawer);
     closeDrawerBtn.addEventListener("click", closeDrawer);
     drawerOverlay.addEventListener("click", closeDrawer);
-
-    // Config Modal Controls
-    openConfigBtn.addEventListener("click", () => {
-        if (backendUrlInput) {
-            backendUrlInput.value = BACKEND_URL;
-        }
-        configModal.classList.remove("hidden");
-        configFeedback.textContent = "";
-    });
-    closeConfigBtn.addEventListener("click", () => configModal.classList.add("hidden"));
-    configModal.addEventListener("click", (e) => {
-        if (e.target === configModal) configModal.classList.add("hidden");
-    });
-
-    // Save Config
-    saveConfigBtn.addEventListener("click", saveSettings);
 }
 
 // System Health Polling
@@ -181,11 +158,6 @@ async function checkSystemHealth() {
     } catch (err) {
         systemStatusEl.className = "status-badge status-offline";
         systemStatusEl.innerHTML = `<span class="dot"></span><span class="status-text">🔴 Backend Disconnected</span>`;
-        
-        // If loaded on a static domain without a configured backend URL, nudge the user
-        if (!BACKEND_URL && window.location.hostname.includes("onrender.com")) {
-            showToast("⚠️ Configure your Render Backend URL in Settings", "warning");
-        }
     }
 }
 
@@ -222,7 +194,7 @@ async function startResearch(query) {
 
         if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.detail || "Failed to start research task. Check backend connection.");
+            throw new Error(errData.detail || "Failed to start research task. Please verify backend connection.");
         }
 
         const data = await res.json();
@@ -390,49 +362,6 @@ function openDrawer() {
 function closeDrawer() {
     reportsDrawer.classList.add("hidden");
     drawerOverlay.classList.add("hidden");
-}
-
-// Settings & API Configuration
-async function saveSettings() {
-    const backendUrl = backendUrlInput ? backendUrlInput.value.trim() : "";
-    const key = groqKeyInput.value.trim();
-
-    // 1. Update Backend URL in localStorage
-    if (backendUrl) {
-        localStorage.setItem("researcher_backend_url", backendUrl);
-        BACKEND_URL = backendUrl;
-    } else if (backendUrl === "") {
-        localStorage.removeItem("researcher_backend_url");
-        BACKEND_URL = "";
-    }
-
-    // 2. If API Key provided, push to backend
-    if (key) {
-        try {
-            const res = await fetch(getApiUrl("/api/config"), {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ groq_api_key: key })
-            });
-
-            if (!res.ok) throw new Error("Failed to save key on backend");
-            groqKeyInput.value = "";
-        } catch (err) {
-            configFeedback.className = "feedback-msg error";
-            configFeedback.textContent = `Error saving key: ${err.message}`;
-            return;
-        }
-    }
-
-    configFeedback.className = "feedback-msg success";
-    configFeedback.textContent = "Settings saved successfully!";
-    
-    setTimeout(() => {
-        configModal.classList.add("hidden");
-        checkSystemHealth();
-        loadReportsList();
-        showToast("Settings updated & reconnected", "success");
-    }, 800);
 }
 
 // Toast Notifications
