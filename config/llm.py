@@ -10,6 +10,11 @@ from crewai import LLM
 os.environ["PYTHONIOENCODING"] = "utf-8"
 os.environ["PYTHONUTF8"] = "1"
 
+# Automatically drop parameters unsupported by Groq (like prompt caching headers)
+litellm.drop_params = True
+litellm.num_retries = 5
+litellm.request_timeout = 60
+
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -17,10 +22,46 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     except Exception:
         pass
 
-# Intelligent rate-limit wrapper that auto-sleeps on Groq quota resets
+
+def _clean_messages_for_groq(messages):
+    """
+    Strips unsupported prompt-caching properties like 'cache_breakpoint'
+    and 'cache_control' that newer CrewAI/LiteLLM versions inject into messages.
+    """
+    if not isinstance(messages, list):
+        return messages
+    cleaned = []
+    for msg in messages:
+        if isinstance(msg, dict):
+            # Clean message dictionary
+            clean_msg = {k: v for k, v in msg.items() if k not in ("cache_breakpoint", "cache_control")}
+            cleaned.append(clean_msg)
+        elif hasattr(msg, "model_dump"):
+            d = msg.model_dump()
+            d.pop("cache_breakpoint", None)
+            d.pop("cache_control", None)
+            cleaned.append(d)
+        else:
+            cleaned.append(msg)
+    return cleaned
+
+
+# Intelligent wrapper that removes cache_breakpoint and auto-sleeps on Groq quota resets
 _orig_litellm_completion = litellm.completion
 
 def _safe_litellm_completion(*args, **kwargs):
+    # 1. Clean message objects of unsupported Groq parameters
+    if "messages" in kwargs:
+        kwargs["messages"] = _clean_messages_for_groq(kwargs["messages"])
+    elif len(args) > 1 and isinstance(args[1], list):
+        args_list = list(args)
+        args_list[1] = _clean_messages_for_groq(args_list[1])
+        args = tuple(args_list)
+
+    # 2. Clean top-level kwargs
+    kwargs.pop("cache_breakpoint", None)
+    kwargs.pop("cache_control", None)
+
     max_attempts = 5
     for attempt in range(max_attempts):
         try:
@@ -29,7 +70,6 @@ def _safe_litellm_completion(*args, **kwargs):
             if attempt == max_attempts - 1:
                 raise e
             err_msg = str(e)
-            # Extract suggested wait time from Groq error message (e.g. "Please try again in 15.12s")
             match = re.search(r"try again in ([\d\.]+)s", err_msg)
             wait_time = float(match.group(1)) + 1.5 if match else 20.0
             print(f"\n[GroqRateLimiter] Rolling token limit reached. Waiting {wait_time:.1f}s for quota reset (attempt {attempt+1}/{max_attempts})...")
