@@ -3,15 +3,48 @@ import re
 from typing import List, Dict, Any, Optional
 import fitz  # PyMuPDF
 import chromadb
-from sentence_transformers import SentenceTransformer
 from rank_bm25 import BM25Okapi
+
+
+class LightweightEmbedder:
+    """
+    High-efficiency ONNX embedder using ChromaDB native DefaultEmbeddingFunction.
+    Uses ~25MB of RAM instead of ~450MB with PyTorch/SentenceTransformers,
+    preventing Out-Of-Memory (OOM) crashes on 512MB cloud environments like Render.
+    """
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        self._ef = None
+        self._st = None
+        try:
+            from chromadb.utils import embedding_functions
+            self._ef = embedding_functions.DefaultEmbeddingFunction()
+        except Exception:
+            try:
+                from sentence_transformers import SentenceTransformer
+                self._st = SentenceTransformer(model_name)
+            except Exception:
+                pass
+
+    def encode(self, texts: List[str], show_progress_bar: bool = False):
+        if self._ef is not None:
+            raw = self._ef(texts)
+            converted = [item.tolist() if hasattr(item, "tolist") else list(item) for item in raw]
+            class Result:
+                def __init__(self, data):
+                    self.data = data
+                def tolist(self):
+                    return self.data
+            return Result(converted)
+        elif self._st is not None:
+            return self._st.encode(texts, show_progress_bar=show_progress_bar)
+        raise RuntimeError("No embedding function available.")
 
 
 class HybridRAG:
     """
     Production-grade Hybrid RAG Engine combining:
     1. Layout-aware PDF chunking with page-level attribution
-    2. Dense Vector Retrieval via Sentence-Transformers & ChromaDB
+    2. Dense Vector Retrieval via Lightweight ONNX Embedder & ChromaDB
     3. Sparse Lexical Retrieval via BM25Okapi
     4. Reciprocal Rank Fusion (RRF) for balanced multi-stage retrieval
     """
@@ -26,8 +59,8 @@ class HybridRAG:
         self.persist_directory = persist_directory
         os.makedirs(self.persist_directory, exist_ok=True)
 
-        print(f"[HybridRAG] Initializing Embedder: {embedding_model}...")
-        self.embedder = SentenceTransformer(embedding_model)
+        print(f"[HybridRAG] Initializing Lightweight Embedder: {embedding_model}...")
+        self.embedder = LightweightEmbedder(embedding_model)
 
         print(f"[HybridRAG] Connecting to ChromaDB at: {persist_directory}...")
         self.chroma_client = chromadb.PersistentClient(path=self.persist_directory)

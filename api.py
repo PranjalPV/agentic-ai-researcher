@@ -10,7 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from crew import run_research, REPORTS_DIR
+REPORTS_DIR = "reports"
+os.makedirs(REPORTS_DIR, exist_ok=True)
 
 app = FastAPI(
     title="Agentic AI Academic Researcher API",
@@ -66,6 +67,7 @@ def _execute_research_job(job_id: str, query: str, session_id: Optional[str], ap
     try:
         if api_key and api_key.strip():
             os.environ["GROQ_API_KEY"] = api_key.strip()
+        from crew import run_research
         result_text = run_research(query=query, save_report=True, session_id=session_id)
         JOBS[job_id]["status"] = "completed"
         JOBS[job_id]["result"] = result_text

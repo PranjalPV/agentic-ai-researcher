@@ -5,9 +5,8 @@ litellm>=1.80.0
 groq>=0.11.0
 pydantic>=2.10.0
 
-# Hybrid RAG & Vector Storage
+# Hybrid RAG & Vector Storage (Native ONNX Embeddings via ChromaDB - Low Memory)
 chromadb>=1.1.0
-sentence-transformers>=3.0.0
 rank-bm25>=0.2.2
 PyMuPDF>=1.25.0
 
