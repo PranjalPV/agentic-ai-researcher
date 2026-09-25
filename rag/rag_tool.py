@@ -34,5 +34,5 @@ def rag_tool(query: str) -> str:
     - Grounded textual excerpts from the papers with [Source: ... | Page: ...] citations.
     """
     engine = get_rag_engine()
-    results = engine.search(query=query, top_k=5)
+    results = engine.search(query=query, top_k=3)
     return engine.format_citation_context(results)

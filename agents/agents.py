@@ -11,15 +11,16 @@ from rag.rag_tool import rag_tool
 # ======================================================
 research_agent = Agent(
     role="Lead AI Literature Scout",
-    goal="Discover top-tier, relevant academic papers from arXiv and Semantic Scholar for: {query}. Filter for technical depth and provide direct PDF download links.",
+    goal="Discover top-tier, relevant academic papers from arXiv for: {query}. Filter for technical depth and provide direct PDF download links.",
     backstory=(
         "You are a senior bibliometric scientist and research scout. You know how to construct "
-        "precise keyword queries, cross-reference arXiv and Semantic Scholar, analyze abstracts, "
-        "and select the most influential or relevant papers while capturing verifiable open-access PDF links."
+        "precise keyword queries, search preprint archives, analyze abstracts, "
+        "and select relevant papers with verified open-access PDF download links."
     ),
     tools=[arxiv_tool, semantic_scholar_tool],
     llm=get_llm("primary"),
     verbose=True,
+    max_iter=3,
     allow_delegation=False
 )
 
@@ -37,6 +38,7 @@ ingestion_agent = Agent(
     tools=[pdf_ingestion_tool, rag_ingestion_tool],
     llm=get_llm("primary"),
     verbose=True,
+    max_iter=3,
     allow_delegation=False
 )
 
@@ -46,21 +48,22 @@ ingestion_agent = Agent(
 comparison_agent = Agent(
     role="Systematic Reviewer & Comparative Analyst",
     goal="""
-    Query the indexed papers via the hybrid RAG tool and construct a thorough, structured comparative matrix covering:
+    Query the indexed papers via the hybrid RAG tool and construct a concise, structured comparative matrix covering:
     - Core Methodologies & Architectural Innovations
     - Datasets & Experimental Setups
     - Quantitative Benchmark Metrics & Results
     - Algorithmic Strengths and Critical Limitations
-    Always cite sources with specific paper titles and page numbers.
+    Ground insights in retrieved text with page numbers.
     """,
     backstory=(
         "You are a veteran meta-reviewer for premier AI conferences (NeurIPS, ICML, ICLR). "
         "You dissect academic claims, compare empirical trade-offs, and ground your synthesis "
-        "exclusively in verified citations extracted through vector retrieval."
+        "in verified citations extracted through vector retrieval."
     ),
     tools=[rag_tool],
     llm=get_llm("primary"),
     verbose=True,
+    max_iter=3,
     allow_delegation=False
 )
 
@@ -84,5 +87,6 @@ insight_agent = Agent(
     tools=[rag_tool],
     llm=get_llm("primary"),
     verbose=True,
+    max_iter=3,
     allow_delegation=False
 )

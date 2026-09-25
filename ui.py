@@ -77,7 +77,7 @@ with st.sidebar:
 
     groq_ready = bool(groq_api_key)
     st.markdown(
-        f"<div class='badge-card'><b>LLM Engine:</b> LLaMA-3.3-70B (Groq)<br>"
+        f"<div class='badge-card'><b>LLM Engine:</b> Qwen 3.8 27B (Groq)<br>"
         f"<b>Status:</b> {'🟢 Online' if groq_ready else '🔴 Missing Key'}</div>",
         unsafe_allow_html=True
     )

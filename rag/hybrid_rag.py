@@ -218,9 +218,13 @@ class HybridRAG:
             meta = item.get("metadata", {})
             source = meta.get("paper_title") or meta.get("title") or meta.get("source_file", "Unknown")
             page = meta.get("page", "?")
+            raw_text = item.get("text", "").strip()
+            # Keep each excerpt concise to avoid token budget overflow
+            words = raw_text.split()
+            truncated_text = " ".join(words[:160]) + ("..." if len(words) > 160 else "")
             formatted.append(
                 f"[Document {i}] - Source: {source} (Page {page})\n"
-                f"Context Excerpt:\n{item['text']}\n"
+                f"Context Excerpt:\n{truncated_text}\n"
             )
 
         return "\n------------------------------------\n".join(formatted)
