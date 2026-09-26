@@ -82,6 +82,12 @@ def _safe_litellm_completion(*args, **kwargs):
             else:
                 wait_time = 15.0
 
+            if wait_time > 45.0:
+                raise RuntimeError(
+                    f"Groq token quota reached (requested wait: {wait_time:.0f}s). "
+                    f"Please try again in a few moments or provide a key with higher tier quota."
+                )
+
             print(f"\n[GroqRateLimiter] Rate limit reached on '{current_model}'. Waiting {wait_time:.1f}s for quota reset (attempt {attempt+1}/{max_attempts})...")
             time.sleep(wait_time)
 
