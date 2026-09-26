@@ -27,6 +27,9 @@
                     <span class="dot"></span>
                     <span class="status-text">Checking System...</span>
                 </div>
+                <button id="apiKeyBtn" class="btn btn-secondary btn-sm" title="Configure Groq API Key">
+                    🔑 API Key
+                </button>
                 <button id="toggleDrawerBtn" class="btn btn-secondary btn-sm" title="View Past Reports">
                     📂 Stored Dossiers (<span id="dossierCount">0</span>)
                 </button>
@@ -188,6 +191,31 @@
             </div>
         </div>
     </aside>
+
+    <!-- API Key Configuration Modal -->
+    <div id="apiKeyModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="drawer-header">
+                <h3>🔑 Configure Groq API Key</h3>
+                <button id="closeApiKeyBtn" class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1rem;">
+                    Supply your own Groq API key (<a href="https://console.groq.com/keys" target="_blank" style="color: var(--primary);">get one free at Groq Console</a>) to bypass rate limits.
+                </p>
+                <input 
+                    type="password" 
+                    id="apiKeyInput" 
+                    placeholder="gsk_..." 
+                    style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main); font-family: monospace; margin-bottom: 1rem;"
+                />
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                    <button id="clearApiKeyBtn" class="btn btn-secondary btn-sm">Clear Key</button>
+                    <button id="saveApiKeyBtn" class="btn btn-primary btn-sm">Save & Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Toast Notification Container -->
     <div id="toastContainer" class="toast-container"></div>

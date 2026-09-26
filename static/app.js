@@ -137,6 +137,57 @@ function setupEventListeners() {
     toggleDrawerBtn.addEventListener("click", openDrawer);
     closeDrawerBtn.addEventListener("click", closeDrawer);
     drawerOverlay.addEventListener("click", closeDrawer);
+
+    // API Key Modal Controls
+    const apiKeyBtn = document.getElementById("apiKeyBtn");
+    const apiKeyModal = document.getElementById("apiKeyModal");
+    const closeApiKeyBtn = document.getElementById("closeApiKeyBtn");
+    const apiKeyInput = document.getElementById("apiKeyInput");
+    const saveApiKeyBtn = document.getElementById("saveApiKeyBtn");
+    const clearApiKeyBtn = document.getElementById("clearApiKeyBtn");
+
+    if (apiKeyBtn && apiKeyModal) {
+        apiKeyBtn.addEventListener("click", () => {
+            apiKeyInput.value = localStorage.getItem("groq_api_key") || "";
+            apiKeyModal.classList.remove("hidden");
+        });
+
+        closeApiKeyBtn.addEventListener("click", () => {
+            apiKeyModal.classList.add("hidden");
+        });
+
+        apiKeyModal.addEventListener("click", (e) => {
+            if (e.target === apiKeyModal) apiKeyModal.classList.add("hidden");
+        });
+
+        saveApiKeyBtn.addEventListener("click", async () => {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem("groq_api_key", key);
+                try {
+                    await fetch(getApiUrl("/api/config"), {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ groq_api_key: key })
+                    });
+                } catch (e) {}
+                showToast("Groq API key saved and applied!", "success");
+            } else {
+                localStorage.removeItem("groq_api_key");
+                showToast("API key removed.", "info");
+            }
+            apiKeyModal.classList.add("hidden");
+            checkSystemHealth();
+        });
+
+        clearApiKeyBtn.addEventListener("click", () => {
+            localStorage.removeItem("groq_api_key");
+            apiKeyInput.value = "";
+            showToast("API key cleared.", "info");
+            apiKeyModal.classList.add("hidden");
+            checkSystemHealth();
+        });
+    }
 }
 
 // System Health Polling
@@ -148,12 +199,13 @@ async function checkSystemHealth() {
 
         dossierCountEl.textContent = data.reports_available || 0;
 
-        if (data.groq_configured) {
+        const hasLocalKey = Boolean(localStorage.getItem("groq_api_key"));
+        if (data.groq_configured || hasLocalKey) {
             systemStatusEl.className = "status-badge status-online";
             systemStatusEl.innerHTML = `<span class="dot"></span><span class="status-text">🟢 Online (Groq Qwen 27B)</span>`;
         } else {
             systemStatusEl.className = "status-badge status-warning";
-            systemStatusEl.innerHTML = `<span class="dot"></span><span class="status-text">⚠️ Missing Groq Key</span>`;
+            systemStatusEl.innerHTML = `<span class="dot"></span><span class="status-text">⚠️ Configure API Key</span>`;
         }
     } catch (err) {
         systemStatusEl.className = "status-badge status-offline";
@@ -186,10 +238,11 @@ async function startResearch(query) {
     }, 100);
 
     try {
+        const customKey = localStorage.getItem("groq_api_key") || undefined;
         const res = await fetch(getApiUrl("/api/research"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: query })
+            body: JSON.stringify({ query: query, api_key: customKey })
         });
 
         if (!res.ok) {
