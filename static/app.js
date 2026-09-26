@@ -203,7 +203,7 @@ async function checkSystemHealth() {
         const hasLocalKey = Boolean(localStorage.getItem("groq_api_key"));
         if (data.groq_configured || hasLocalKey) {
             systemStatusEl.className = "status-badge status-online";
-            systemStatusEl.innerHTML = `<span class="dot"></span><span class="status-text">🟢 Online (Groq Qwen 27B)</span>`;
+            systemStatusEl.innerHTML = `<span class="dot"></span><span class="status-text">🟢 Online (Groq Enterprise LLM)</span>`;
         } else {
             systemStatusEl.className = "status-badge status-warning";
             systemStatusEl.innerHTML = `<span class="dot"></span><span class="status-text">⚠️ Configure API Key</span>`;
