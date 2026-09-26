@@ -135,7 +135,8 @@ def health_check():
     return {
         "status": "healthy",
         "service": "Agentic AI Academic Researcher",
-        "version": "2.0.3",
+        "version": "2.0.4",
+        "fast_model": os.getenv("GROQ_FAST_MODEL") or "groq/openai/gpt-oss-20b",
         "primary_model": os.getenv("GROQ_PRIMARY_MODEL") or os.getenv("GROQ_MODEL") or "groq/openai/gpt-oss-120b",
         "groq_configured": has_groq,
         "openai_configured": has_openai,

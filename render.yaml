@@ -11,6 +11,8 @@ services:
         value: 3.11.0
       - key: GROQ_API_KEY
         sync: false
+      - key: GROQ_FAST_MODEL
+        value: "groq/openai/gpt-oss-20b"
       - key: GROQ_PRIMARY_MODEL
         value: "groq/openai/gpt-oss-120b"
       - key: GROQ_MAX_TOKENS

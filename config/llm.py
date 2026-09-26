@@ -103,10 +103,6 @@ def _safe_litellm_completion(*args, **kwargs):
                     kwargs["model"] = "groq/openai/gpt-oss-20b"
                     continue
                 elif "20b" in current_model:
-                    print(f"\n[GroqFallback] Switching from {current_model} to groq/qwen/qwen3.8-27b due to rate limit wait: {wait_time:.1f}s")
-                    kwargs["model"] = "groq/qwen/qwen3.8-27b"
-                    continue
-                elif "qwen" in current_model:
                     print(f"\n[GroqFallback] Switching from {current_model} to groq/openai/gpt-oss-120b due to rate limit wait: {wait_time:.1f}s")
                     kwargs["model"] = "groq/openai/gpt-oss-120b"
                     continue
@@ -163,22 +159,35 @@ load_dotenv()
 def get_llm(model_type: str = "primary") -> LLM:
     """
     Factory to return an enterprise-grade LLM instance with fallback support.
-    Defaults to Groq's high-speed openai/gpt-oss-120b with automatic token recovery.
-    Allocates generous token limits (2048 for primary, 3000 for synthesis) so full 6-section dossiers complete cleanly.
+    - 'fast': groq/openai/gpt-oss-20b (high speed, low latency, for scouting and indexing)
+    - 'primary': groq/openai/gpt-oss-120b (deep academic review and cross-analysis)
+    - 'synthesis': groq/openai/gpt-oss-120b (high-capacity token ceiling for full executive dossiers)
     """
     groq_api_key = os.getenv("GROQ_API_KEY")
     openai_api_key = os.getenv("OPENAI_API_KEY")
+
     if model_type == "synthesis":
         max_tokens = int(os.getenv("GROQ_MAX_TOKENS_SYNTHESIS", "3000"))
+    elif model_type == "fast":
+        max_tokens = int(os.getenv("GROQ_MAX_TOKENS_FAST", "2048"))
     else:
         max_tokens = int(os.getenv("GROQ_MAX_TOKENS", "2048"))
 
     if groq_api_key and groq_api_key.strip() != "":
-        default_model = os.getenv("GROQ_PRIMARY_MODEL") or os.getenv("GROQ_MODEL") or "groq/openai/gpt-oss-120b"
+        if model_type == "fast":
+            default_model = os.getenv("GROQ_FAST_MODEL") or "groq/openai/gpt-oss-20b"
+            temp = 0.1
+        elif model_type == "synthesis":
+            default_model = os.getenv("GROQ_SYNTHESIS_MODEL") or os.getenv("GROQ_PRIMARY_MODEL") or os.getenv("GROQ_MODEL") or "groq/openai/gpt-oss-120b"
+            temp = 0.1
+        else:
+            default_model = os.getenv("GROQ_PRIMARY_MODEL") or os.getenv("GROQ_MODEL") or "groq/openai/gpt-oss-120b"
+            temp = 0.2
+
         return LLM(
             model=default_model,
             api_key=groq_api_key,
-            temperature=0.2 if model_type == "primary" else 0.1,
+            temperature=temp,
             max_tokens=max_tokens,
             verbose=False
         )

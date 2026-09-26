@@ -19,7 +19,7 @@ def create_research_agent() -> Agent:
             "and select relevant papers with verified open-access PDF download links."
         ),
         tools=[arxiv_tool, semantic_scholar_tool],
-        llm=get_llm("primary"),
+        llm=get_llm("fast"),
         verbose=True,
         max_iter=3,
         allow_delegation=False
@@ -38,7 +38,7 @@ def create_ingestion_agent() -> Agent:
             "hybrid vector store for fast, citation-grounded retrieval with direct download links."
         ),
         tools=[rag_ingestion_tool],
-        llm=get_llm("primary"),
+        llm=get_llm("fast"),
         verbose=True,
         max_iter=3,
         allow_delegation=False

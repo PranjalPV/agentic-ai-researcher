@@ -54,8 +54,10 @@ flowchart TD
 * Rather than downloading heavy 20MB binary PDF files over HTTP and running CPU-intensive parsers on constrained cloud servers, the ingestion engine extracts high-density academic abstracts, methodologies, and findings directly from arXiv and Semantic Scholar.
 * Every analyzed paper preserves its verified open-access URL and PDF link in vector metadata. Section 6 of every generated report provides clickable `**[Paper Title](direct_pdf_url)**` links, allowing users to inspect, read, or download the original publications directly.
 
-### 3. Streamlined Multi-Agent Context Pipeline
-* **Zero Redundant Passes:** Agent 3 extracts the comparative matrix, benchmark figures, and citations from Hybrid RAG. Agent 4 directly synthesizes the executive dossier, unresolved research gaps, and future directions from Agent 3's context without redundant RAG calls, cutting execution latency by over 60%.
+### 3. Tiered Model Specialization (High Speed + Deep Reasoning)
+* **Agents 1 & 2 (Literature Scout & RAG Ingestion):** Powered by `openai/gpt-oss-20b` for rapid preprint filtering, metadata extraction, and vector indexing with minimal latency and high throughput.
+* **Agents 3 & 4 (Systematic Reviewer & Principal Strategist):** Powered by `openai/gpt-oss-120b` with a 3,000 token output ceiling for rigorous multi-paper meta-analysis, empirical benchmark comparisons, and publication-grade executive dossier synthesis.
+* **Zero Redundant Passes:** Agent 3 extracts the comparative matrix, benchmark figures, and citations from Hybrid RAG. Agent 4 directly synthesizes the executive dossier, unresolved research gaps, and future directions from Agent 3's context without redundant RAG calls, cutting execution latency significantly.
 
 ### 4. Isolated Vector Sessions (Zero Cross-Topic Contamination)
 * Rather than a static, hardcoded vector database, each query dynamically provisions an isolated session (`session_<slug>_<timestamp>`). This eliminates cross-topic hallucination and vector pollution across research queries.
