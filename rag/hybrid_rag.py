@@ -95,11 +95,14 @@ class HybridRAG:
         self,
         pdf_path: str,
         chunk_size_words: int = 400,
-        overlap_words: int = 80
+        overlap_words: int = 60,
+        max_pages: int = 6
     ) -> List[Dict[str, Any]]:
         """
-        Parses a PDF using PyMuPDF page-by-page, chunking while tracking
-        exact page numbers and document titles for verifiable citations.
+        Parses a PDF using PyMuPDF page-by-page.
+        Caps parsing at `max_pages` (default 6) to focus strictly on Abstract,
+        Introduction, Methodology, and Benchmark Results, preventing memory exhaustion
+        on 512MB cloud environments.
         """
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"PDF not found: {pdf_path}")
@@ -109,7 +112,9 @@ class HybridRAG:
         clean_title = os.path.splitext(base_name)[0]
 
         chunks = []
-        for page_num in range(len(doc)):
+        total_pages = min(len(doc), max_pages)
+
+        for page_num in range(total_pages):
             page = doc[page_num]
             text = page.get_text("text")
 
@@ -141,6 +146,7 @@ class HybridRAG:
                     })
 
         doc.close()
+        del doc
         return chunks
 
     def ingest_pdf(self, pdf_path: str, title: Optional[str] = None) -> int:
@@ -158,8 +164,13 @@ class HybridRAG:
             for m in metadatas:
                 m["paper_title"] = title
 
-        # Dense Vector embeddings
-        embeddings = self.embedder.encode(documents, show_progress_bar=False).tolist()
+        # Dense Vector embeddings in batches of 16 to avoid ONNX tensor memory spikes
+        embeddings = []
+        batch_size = 16
+        for i in range(0, len(documents), batch_size):
+            batch_docs = documents[i : i + batch_size]
+            batch_embs = self.embedder.encode(batch_docs, show_progress_bar=False).tolist()
+            embeddings.extend(batch_embs)
 
         # Add to Chroma
         self.collection.upsert(
@@ -179,6 +190,9 @@ class HybridRAG:
         tokenized_corpus = [doc.lower().split() for doc in self.bm25_documents]
         if tokenized_corpus:
             self.bm25_index = BM25Okapi(tokenized_corpus)
+
+        import gc
+        gc.collect()
 
         return len(chunks)
 

@@ -23,23 +23,27 @@ from rag.rag_tool import reset_rag_engine
 REPORTS_DIR = "reports"
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
-# Pre-configured Crew instance for direct imports
-crew = Crew(
-    agents=[
-        research_agent,
-        ingestion_agent,
-        comparison_agent,
-        insight_agent
-    ],
-    tasks=[
-        research_task,
-        ingestion_task,
-        comparison_task,
-        insight_task
-    ],
-    process=Process.sequential,
-    verbose=True
-)
+def build_crew() -> Crew:
+    """Builds a fresh Crew instance for each research run to isolate state and task contexts."""
+    return Crew(
+        agents=[
+            research_agent,
+            ingestion_agent,
+            comparison_agent,
+            insight_agent
+        ],
+        tasks=[
+            research_task,
+            ingestion_task,
+            comparison_task,
+            insight_task
+        ],
+        process=Process.sequential,
+        verbose=True
+    )
+
+# Pre-configured Crew instance for direct imports (backwards compatibility)
+crew = build_crew()
 
 
 def run_research(query: str, save_report: bool = True, session_id: Optional[str] = None) -> str:
@@ -56,7 +60,8 @@ def run_research(query: str, save_report: bool = True, session_id: Optional[str]
     print(f"\n[AgenticResearcher] Launching research crew for topic: '{query}'")
     print(f"[AgenticResearcher] Session ID: {session_name}\n")
 
-    result = crew.kickoff(inputs={"query": query})
+    active_crew = build_crew()
+    result = active_crew.kickoff(inputs={"query": query})
     result_text = str(result)
 
     if save_report:

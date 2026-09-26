@@ -6,10 +6,14 @@ from rag.hybrid_rag import HybridRAG
 _RAG_ENGINE: Optional[HybridRAG] = None
 
 
-def get_rag_engine(collection_name: str = "academic_research") -> HybridRAG:
-    """Singleton getter for the persistent hybrid RAG engine."""
+def get_rag_engine(collection_name: Optional[str] = None) -> HybridRAG:
+    """Singleton getter for the persistent hybrid RAG engine.
+    Re-uses existing engine if already initialized to conserve memory and avoid duplicate ONNX models.
+    """
     global _RAG_ENGINE
-    if _RAG_ENGINE is None or _RAG_ENGINE.collection_name != collection_name:
+    if _RAG_ENGINE is None:
+        _RAG_ENGINE = HybridRAG(collection_name=collection_name or "academic_research")
+    elif collection_name and _RAG_ENGINE.collection_name != collection_name:
         _RAG_ENGINE = HybridRAG(collection_name=collection_name)
     return _RAG_ENGINE
 

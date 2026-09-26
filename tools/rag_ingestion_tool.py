@@ -86,6 +86,16 @@ def rag_ingestion_tool(pdf_paths: Union[List[str], str]) -> str:
                 total_chunks += chunks_created
         except Exception as e:
             print(f"[rag_ingestion_tool] Failed to index {path}: {e}")
+        finally:
+            # Unlink binary PDF after indexing to reclaim memory buffers and ephemeral disk
+            if os.path.exists(path):
+                try:
+                    os.remove(path)
+                except Exception:
+                    pass
+
+    import gc
+    gc.collect()
 
     return json.dumps({
         "status": "success" if successful else "failed",

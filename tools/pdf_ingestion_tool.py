@@ -59,39 +59,63 @@ def pdf_ingestion_tool(pdf_urls: Union[List[str], str]) -> str:
             "downloaded_files": []
         })
 
+    # Strictly cap to top 2 papers to avoid memory exhaustion on 512MB cloud instances
+    urls = urls[:2]
+
     saved_files = []
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 
     for url in urls:
+        path = None
         try:
             # Ensure URL points to PDF endpoint for arXiv
             if "arxiv.org/abs/" in url:
                 url = url.replace("arxiv.org/abs/", "arxiv.org/pdf/") + ".pdf"
 
-            response = requests.get(url, headers=headers, timeout=25, allow_redirects=True)
+            response = requests.get(url, headers=headers, timeout=20, stream=True, allow_redirects=True)
             if response.status_code != 200:
-                continue
-
-            content = response.content
-            # Verify PDF magic byte signature (%PDF-)
-            if not content.startswith(b"%PDF"):
                 continue
 
             filename = f"paper_{uuid.uuid4().hex[:8]}.pdf"
             path = os.path.join(TEMP_DIR, filename)
 
+            total_bytes = 0
+            max_bytes = 10 * 1024 * 1024  # 10MB ceiling
             with open(path, "wb") as f:
-                f.write(content)
+                for chunk in response.iter_content(chunk_size=65536):
+                    if chunk:
+                        total_bytes += len(chunk)
+                        if total_bytes > max_bytes:
+                            break
+                        f.write(chunk)
+
+            if total_bytes < 100:
+                if os.path.exists(path):
+                    os.remove(path)
+                continue
+
+            # Verify PDF magic byte signature (%PDF-)
+            with open(path, "rb") as f:
+                header = f.read(5)
+            if not header.startswith(b"%PDF"):
+                if os.path.exists(path):
+                    os.remove(path)
+                continue
 
             saved_files.append({
                 "path": path,
-                "size_kb": round(len(content) / 1024, 1),
+                "size_kb": round(total_bytes / 1024, 1),
                 "source_url": url
             })
 
         except Exception as e:
+            if path and os.path.exists(path):
+                try:
+                    os.remove(path)
+                except Exception:
+                    pass
             continue
 
     return json.dumps({

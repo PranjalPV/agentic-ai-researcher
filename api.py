@@ -1,4 +1,6 @@
 import os
+import gc
+import json
 import uuid
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -96,6 +98,7 @@ def _execute_research_job(job_id: str, query: str, session_id: Optional[str], ap
     JOBS[job_id]["status"] = "running"
     _save_persisted_job(job_id, JOBS[job_id])
     try:
+        gc.collect()
         if api_key and api_key.strip():
             os.environ["GROQ_API_KEY"] = api_key.strip()
         from crew import run_research
@@ -109,6 +112,8 @@ def _execute_research_job(job_id: str, query: str, session_id: Optional[str], ap
         JOBS[job_id]["error"] = str(e)
         JOBS[job_id]["completed_at"] = datetime.now().isoformat()
         _save_persisted_job(job_id, JOBS[job_id])
+    finally:
+        gc.collect()
 
 
 @app.get("/health", tags=["System"])
@@ -188,6 +193,11 @@ def get_job_status(job_id: str):
     if not job:
         persisted = _load_persisted_jobs()
         job = persisted.get(job_id)
+        # If job was persisted as running but missing from active memory, it was interrupted by server restart
+        if job and job.get("status") == "running":
+            job["status"] = "failed"
+            job["error"] = "Research execution was interrupted by cloud container recycling. Please retry."
+            _save_persisted_job(job_id, job)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found.")
     return JobStatusResponse(**job)

@@ -229,8 +229,11 @@ function pollJobStatus(jobId) {
             const res = await fetch(getApiUrl(`/api/research/${jobId}`));
             if (!res.ok) {
                 consecutiveNetworkErrors++;
-                if (consecutiveNetworkErrors > 20) {
-                    throw new Error(`Server returned HTTP ${res.status}`);
+                if (consecutiveNetworkErrors > 25) {
+                    const detail = res.status === 404
+                        ? "Research task expired or the server was recycled. Please retry."
+                        : `Server returned HTTP ${res.status}`;
+                    throw new Error(detail);
                 }
                 return; // Temporary blip, retry next tick
             }
@@ -249,7 +252,7 @@ function pollJobStatus(jobId) {
             }
         } catch (err) {
             consecutiveNetworkErrors++;
-            if (consecutiveNetworkErrors > 20 || pollCount > 450) { // 15 minutes limit
+            if (consecutiveNetworkErrors > 25 || pollCount > 450) { // 15 minutes limit
                 clearInterval(pollInterval);
                 clearInterval(timerInterval);
                 handleResearchError(err.message || "Connection to research server lost.");
@@ -300,7 +303,6 @@ function handleResearchError(errMsg) {
     clearInterval(pollInterval);
 
     showToast(`Error: ${errMsg}`, "error");
-    alert(`Research Pipeline Error:\n\n${errMsg}`);
 }
 
 // Stored Reports Drawer
