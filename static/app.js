@@ -102,23 +102,6 @@ function setupEventListeners() {
         themeToggleBtn.addEventListener("click", toggleTheme);
     }
 
-    // Input Clear Button
-    const clearInputBtn = document.getElementById("clearInputBtn");
-    if (clearInputBtn && queryInput) {
-        queryInput.addEventListener("input", () => {
-            if (queryInput.value.trim().length > 0) {
-                clearInputBtn.classList.remove("hidden");
-            } else {
-                clearInputBtn.classList.add("hidden");
-            }
-        });
-        clearInputBtn.addEventListener("click", () => {
-            queryInput.value = "";
-            queryInput.focus();
-            clearInputBtn.classList.add("hidden");
-        });
-    }
-
     // Research Form Submit
     researchForm.addEventListener("submit", (e) => {
         e.preventDefault();
@@ -131,7 +114,6 @@ function setupEventListeners() {
     document.querySelectorAll(".chip").forEach(chip => {
         chip.addEventListener("click", () => {
             queryInput.value = chip.getAttribute("data-query");
-            if (clearInputBtn) clearInputBtn.classList.remove("hidden");
             queryInput.focus();
             showToast("Topic populated into inquiry field", "info");
         });
@@ -148,15 +130,6 @@ function setupEventListeners() {
             document.getElementById(targetId).classList.add("active");
         });
     });
-
-    // Print / PDF Button
-    const printBtn = document.getElementById("printBtn");
-    if (printBtn) {
-        printBtn.addEventListener("click", () => {
-            if (!currentReportText) return;
-            window.print();
-        });
-    }
 
     // Download Button (Client-side Blob - zero reload, instant download)
     downloadBtn.addEventListener("click", () => {
@@ -214,57 +187,6 @@ function setupEventListeners() {
                     item.style.display = "none";
                 }
             });
-        });
-    }
-
-    // API Key Modal Controls
-    const apiKeyBtn = document.getElementById("apiKeyBtn");
-    const apiKeyModal = document.getElementById("apiKeyModal");
-    const closeApiKeyBtn = document.getElementById("closeApiKeyBtn");
-    const apiKeyInput = document.getElementById("apiKeyInput");
-    const saveApiKeyBtn = document.getElementById("saveApiKeyBtn");
-    const clearApiKeyBtn = document.getElementById("clearApiKeyBtn");
-
-    if (apiKeyBtn && apiKeyModal) {
-        apiKeyBtn.addEventListener("click", () => {
-            apiKeyInput.value = localStorage.getItem("groq_api_key") || "";
-            apiKeyModal.classList.remove("hidden");
-        });
-
-        closeApiKeyBtn.addEventListener("click", () => {
-            apiKeyModal.classList.add("hidden");
-        });
-
-        apiKeyModal.addEventListener("click", (e) => {
-            if (e.target === apiKeyModal) apiKeyModal.classList.add("hidden");
-        });
-
-        saveApiKeyBtn.addEventListener("click", async () => {
-            const key = apiKeyInput.value.trim();
-            if (key) {
-                localStorage.setItem("groq_api_key", key);
-                try {
-                    await fetch(getApiUrl("/api/config"), {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ groq_api_key: key })
-                    });
-                } catch (e) {}
-                showToast("Groq API key saved and applied!", "success");
-            } else {
-                localStorage.removeItem("groq_api_key");
-                showToast("API key removed.", "info");
-            }
-            apiKeyModal.classList.add("hidden");
-            checkSystemHealth();
-        });
-
-        clearApiKeyBtn.addEventListener("click", () => {
-            localStorage.removeItem("groq_api_key");
-            apiKeyInput.value = "";
-            showToast("API key cleared.", "info");
-            apiKeyModal.classList.add("hidden");
-            checkSystemHealth();
         });
     }
 }
@@ -393,6 +315,33 @@ function pollJobStatus(jobId) {
     }, 2000);
 }
 
+// Post-process rendered Markdown for high readability
+function formatRenderedMarkdown(container) {
+    if (!container) return;
+
+    // 1. Wrap all tables in a responsive scroll container so columns never get squished
+    container.querySelectorAll("table").forEach(table => {
+        if (!table.parentElement.classList.contains("table-container")) {
+            const wrapper = document.createElement("div");
+            wrapper.className = "table-container";
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+        }
+    });
+
+    // 2. Clean up links: open in new tab and replace long raw URLs with clean readable labels
+    container.querySelectorAll("a").forEach(a => {
+        a.setAttribute("target", "_blank");
+        a.setAttribute("rel", "noopener noreferrer");
+
+        const text = a.textContent.trim();
+        if (text.startsWith("http://") || text.startsWith("https://") || text.includes("arxiv.org/abs") || text.includes("arxiv.org/pdf")) {
+            a.textContent = "📄 View Paper (PDF) ↗";
+            a.classList.add("clean-pdf-link");
+        }
+    });
+}
+
 // Success Handler
 function handleResearchSuccess(resultText) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -407,15 +356,12 @@ function handleResearchSuccess(resultText) {
 
     // Populate Results
     resultTopic.textContent = currentReportTopic;
-    resultMeta.textContent = `Completed in ${elapsed}s • Verified Citations Grounded`;
+    resultMeta.textContent = `Completed in ${elapsed}s • Grounded Citations & Benchmarks`;
 
     // Render Markdown via marked.js
     if (window.marked) {
         tabRendered.innerHTML = marked.parse(resultText);
-        tabRendered.querySelectorAll("a").forEach(a => {
-            a.setAttribute("target", "_blank");
-            a.setAttribute("rel", "noopener noreferrer");
-        });
+        formatRenderedMarkdown(tabRendered);
     } else {
         tabRendered.textContent = resultText;
     }
@@ -439,16 +385,6 @@ function handleResearchError(errMsg) {
     clearInterval(pollInterval);
 
     showToast(`Error: ${errMsg}`, "error");
-
-    if (errMsg && (errMsg.includes("quota") || errMsg.includes("rate limit") || errMsg.includes("Rate limit"))) {
-        const apiKeyModal = document.getElementById("apiKeyModal");
-        if (apiKeyModal) {
-            apiKeyModal.classList.remove("hidden");
-        }
-        setTimeout(() => {
-            showToast("Server key reached Groq limit. Enter your own free key!", "error");
-        }, 1200);
-    }
 }
 
 // Stored Reports Drawer
@@ -494,10 +430,7 @@ async function loadReport(filename) {
 
         if (window.marked) {
             tabRendered.innerHTML = marked.parse(data.content);
-            tabRendered.querySelectorAll("a").forEach(a => {
-                a.setAttribute("target", "_blank");
-                a.setAttribute("rel", "noopener noreferrer");
-            });
+            formatRenderedMarkdown(tabRendered);
         } else {
             tabRendered.textContent = data.content;
         }

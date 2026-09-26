@@ -51,14 +51,15 @@ def create_comparison_task(agent: Agent, r_task: Task) -> Task:
     return Task(
         description="""
         Use academic_hybrid_rag_tool once to query the indexed literature for key methodology, architectures, datasets, and benchmark results for: '{query}'.
-        Construct a Markdown comparative matrix table:
-        | Paper Title & Direct Link | Methodology / Architecture | Datasets | Key Results | Strengths & Limitations |
-        Follow the table with a concise comparative analysis paragraph citing paper titles and direct links.
+        Construct a clean, high-readability Markdown comparative matrix table with 4 focused columns:
+        | Paper & Focus | Architecture & Key Mechanism | Key Datasets & Benchmark Metrics | Strengths & Primary Trade-offs |
+        Keep table text structured with concise bullet points so metric numbers and acronyms read cleanly without word wrapping.
+        Follow the table with an analytical comparison summary citing paper titles and direct links.
         """,
         agent=agent,
         context=[r_task],
         expected_output="""
-        A comparative matrix table with direct paper links and analytical summary grounded in citations.
+        A clean, high-readability comparative matrix table with 4 columns and analytical summary grounded in citations.
         """
     )
 
@@ -74,18 +75,19 @@ def create_insight_task(agent: Agent, r_task: Task, c_task: Task) -> Task:
         # Academic Research Dossier: {query}
         ## 1. Executive Summary
         ## 2. Comparative Analysis & Benchmark Matrix
+        (Present a clean 4-column matrix: | Paper & Focus | Architecture & Key Mechanism | Key Datasets & Benchmark Metrics | Strengths & Primary Trade-offs | followed by comparative synthesis)
         ## 3. Critical Research Gaps & Unexplored Hypotheses
         ## 4. High-Impact Future Research Directions
         ## 5. Recommended Baseline Architecture to Build Upon
         ## 6. Analyzed Papers & Direct Read/Download Links
-           List each analyzed paper with a clickable markdown link:
+           List each analyzed paper clearly:
            - **[Paper Title](direct_pdf_url)** — Authors (Year). Summary: ...
         Keep formatting clean, professional, and publication-ready.
         """,
         agent=agent,
         context=[r_task, c_task],
         expected_output="""
-        A publication-quality Executive Research Dossier in Markdown format with verified clickable direct paper links.
+        A publication-quality Executive Research Dossier in Markdown format with verified clickable direct paper links and clean table formatting.
         """
     )
 
