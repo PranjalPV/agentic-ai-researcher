@@ -61,7 +61,10 @@ def _safe_litellm_completion(*args, **kwargs):
     # 2. Clean top-level kwargs
     kwargs.pop("cache_breakpoint", None)
     kwargs.pop("cache_control", None)
+    if "tools" not in kwargs:
+        kwargs.pop("tool_choice", None)
 
+    current_model = kwargs.get("model", "")
     max_attempts = 5
     for attempt in range(max_attempts):
         try:
@@ -70,9 +73,16 @@ def _safe_litellm_completion(*args, **kwargs):
             if attempt == max_attempts - 1:
                 raise e
             err_msg = str(e)
-            match = re.search(r"try again in ([\d\.]+)s", err_msg)
-            wait_time = float(match.group(1)) + 1.5 if match else 20.0
-            print(f"\n[GroqRateLimiter] Rolling token limit reached. Waiting {wait_time:.1f}s for quota reset (attempt {attempt+1}/{max_attempts})...")
+            
+            match = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", err_msg)
+            if match:
+                mins = float(match.group(1)) if match.group(1) else 0.0
+                secs = float(match.group(2))
+                wait_time = mins * 60 + secs + 1.5
+            else:
+                wait_time = 15.0
+
+            print(f"\n[GroqRateLimiter] Rate limit reached on '{current_model}'. Waiting {wait_time:.1f}s for quota reset (attempt {attempt+1}/{max_attempts})...")
             time.sleep(wait_time)
 
 litellm.completion = _safe_litellm_completion
@@ -83,20 +93,22 @@ load_dotenv()
 def get_llm(model_type: str = "primary") -> LLM:
     """
     Factory to return an enterprise-grade LLM instance with fallback support.
-    Defaults to Groq's high-speed, tool-reliable qwen/qwen3.8-27b.
-    Limits max_tokens to 500 to stay strictly within Groq free-tier 1,000 OTPM limits.
-    Can be overridden via environment variables: GROQ_PRIMARY_MODEL, GROQ_MAX_TOKENS.
+    Defaults to Groq's high-speed qwen/qwen3.8-27b.
+    Allocates generous token limits (1800 for synthesis) so full 6-section dossiers complete cleanly.
     """
     groq_api_key = os.getenv("GROQ_API_KEY")
     openai_api_key = os.getenv("OPENAI_API_KEY")
-    max_tokens = int(os.getenv("GROQ_MAX_TOKENS", "500"))
+    if model_type == "synthesis":
+        max_tokens = int(os.getenv("GROQ_MAX_TOKENS_SYNTHESIS", "1800"))
+    else:
+        max_tokens = int(os.getenv("GROQ_MAX_TOKENS", "1000"))
 
     if groq_api_key and groq_api_key.strip() != "":
         default_model = os.getenv("GROQ_PRIMARY_MODEL") or os.getenv("GROQ_MODEL") or "groq/qwen/qwen3.8-27b"
         return LLM(
             model=default_model,
             api_key=groq_api_key,
-            temperature=0.2 if model_type == "primary" else 0.0,
+            temperature=0.2 if model_type == "primary" else 0.1,
             max_tokens=max_tokens,
             verbose=False
         )

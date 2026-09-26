@@ -52,10 +52,10 @@ const steps = [
 
 // Phase descriptions
 const phaseMessages = [
-    "Phase 1: Literature Scout querying arXiv & Semantic Scholar...",
-    "Phase 2: Ingesting open-access PDFs & layout-aware PyMuPDF chunking...",
-    "Phase 3: Hybrid Retrieval (ChromaDB + BM25) & Reciprocal Rank Fusion...",
-    "Phase 4: Research Strategist synthesizing comparative review & future directions..."
+    "Phase 1: Literature Scout querying arXiv & Semantic Scholar with direct links...",
+    "Phase 2: Indexing paper abstracts & methodologies into Hybrid RAG...",
+    "Phase 3: Hybrid Retrieval (ChromaDB + BM25) & comparative matrix...",
+    "Phase 4: Research Strategist synthesizing Executive Dossier & paper download links..."
 ];
 
 // Initialize on Load

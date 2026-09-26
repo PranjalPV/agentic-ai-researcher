@@ -11,33 +11,34 @@ from agents.agents import (
 # ======================================================
 research_task = Task(
     description="""
-    Search arXiv using arxiv_academic_search_tool for: '{query}'.
-    Select 2 relevant papers with active PDF URLs.
-    Output: Paper Title, Authors, Year, 2-sentence summary, and direct PDF URL.
+    Search arXiv and Semantic Scholar for research literature on: '{query}'.
+    Select the top 2-3 most authoritative and relevant academic papers.
+    For each paper, extract and output:
+    - Title
+    - Authors & Published Year
+    - Core Abstract & Technical Methodology Summary
+    - Direct PDF Download URL (e.g., https://arxiv.org/pdf/...)
     """,
     agent=research_agent,
     expected_output="""
-    A list of 2 research papers containing:
-    - Title, Authors, Published Year
-    - Brief 2-sentence summary
-    - Direct PDF download URL
+    A structured list of 2-3 academic papers containing Title, Authors, Year, Technical Abstract, and Direct PDF Download Links.
     """
 )
 
 # ======================================================
-# 2. Ingestion Task – PDF Ingestion & Hybrid Indexing
+# 2. Ingestion Task – Hybrid Knowledge Indexing
 # ======================================================
 ingestion_task = Task(
     description="""
-    From the research task results:
-    1. Call pdf_download_tool with the PDF URLs to download them.
-    2. Call rag_pdf_indexer_tool with the paths to index them into ChromaDB and BM25.
-    3. Output confirmation of papers downloaded and total chunks indexed.
+    From the discovered research literature in the scout results:
+    Call rag_pdf_indexer_tool with the paper data to index paper titles, abstracts, methodology, and direct PDF links into the Hybrid RAG engine (ChromaDB + BM25).
+    Ensure each entry attaches its direct open-access PDF link for grounded citations.
+    Output: Confirmation of indexed papers and chunks.
     """,
     agent=ingestion_agent,
     context=[research_task],
     expected_output="""
-    Confirmation with count of papers downloaded and total chunks indexed.
+    Confirmation reporting the number of academic papers and chunks indexed into the Hybrid RAG vector store.
     """
 )
 
@@ -46,35 +47,40 @@ ingestion_task = Task(
 # ======================================================
 comparison_task = Task(
     description="""
-    Use academic_hybrid_rag_tool once to query the indexed papers for key methodology, datasets, and benchmark results for: '{query}'.
-    Create a Markdown comparative table with columns:
-    | Paper Title | Methodology / Architecture | Datasets | Key Results | Strengths & Limitations |
-    Follow with a concise summary paragraph citing page numbers.
+    Use academic_hybrid_rag_tool once to query the indexed literature for key methodology, architectures, datasets, and benchmark results for: '{query}'.
+    Construct a Markdown comparative matrix table:
+    | Paper Title & Direct Link | Methodology / Architecture | Datasets | Key Results | Strengths & Limitations |
+    Follow the table with a concise comparative analysis paragraph citing paper titles and direct links.
     """,
     agent=comparison_agent,
     context=[research_task],
     expected_output="""
-    A Markdown comparison table and brief analytical summary grounded in citations.
+    A comparative matrix table with direct paper links and analytical summary grounded in citations.
     """
 )
 
 # ======================================================
-# 4. Insight Task – Synthesis, Gaps & Future Directions
+# 4. Insight Task – Synthesis, Gaps & Direct Paper Links
 # ======================================================
 insight_task = Task(
     description="""
-    Based on the comparison findings, write an Executive Academic Research Dossier for: '{query}'.
-    Include:
-    1. Executive Summary
-    2. 2-3 Critical Research Gaps
-    3. 2 High-Impact Future Directions
-    4. Recommended Baseline Approach
-    5. References with URLs
-    Keep formatting clean and concise.
+    Synthesize an authoritative Executive Academic Research Dossier for: '{query}' directly from the comparative review and findings.
+    Do NOT call any retrieval tools — synthesize directly from the comparison findings provided in your context.
+    Structure the dossier as:
+    # Academic Research Dossier: {query}
+    ## 1. Executive Summary
+    ## 2. Comparative Analysis & Benchmark Matrix
+    ## 3. Critical Research Gaps & Unexplored Hypotheses
+    ## 4. High-Impact Future Research Directions
+    ## 5. Recommended Baseline Architecture to Build Upon
+    ## 6. Analyzed Papers & Direct Read/Download Links
+       List each analyzed paper with a clickable markdown link:
+       - **[Paper Title](direct_pdf_url)** — Authors (Year). Summary: ...
+    Keep formatting clean, professional, and publication-ready.
     """,
     agent=insight_agent,
-    context=[comparison_task],
+    context=[research_task, comparison_task],
     expected_output="""
-    A publication-quality Executive Research Dossier in Markdown format.
+    A publication-quality Executive Research Dossier in Markdown format with verified clickable direct paper links.
     """
 )

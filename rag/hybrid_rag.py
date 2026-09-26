@@ -196,6 +196,71 @@ class HybridRAG:
 
         return len(chunks)
 
+    def ingest_papers(self, papers: List[Dict[str, Any]]) -> int:
+        """
+        Ingests academic papers directly from structured literature metadata
+        (title, abstract, authors, year, pdf_url).
+        Creates high-fidelity semantic chunks, computes dense embeddings, and
+        indexes into ChromaDB and BM25 with direct paper URLs for verified citations.
+        Zero disk bloat, zero 50-page PDF download bottlenecks, instant indexing.
+        """
+        if not papers:
+            return 0
+
+        ids = []
+        documents = []
+        metadatas = []
+
+        for idx, paper in enumerate(papers):
+            title = paper.get("title", f"Paper_{idx+1}").strip()
+            abstract = (paper.get("summary") or paper.get("abstract") or "").strip()
+            authors = ", ".join(paper.get("authors", [])) if isinstance(paper.get("authors"), list) else str(paper.get("authors", "")).strip()
+            year = str(paper.get("published_year") or paper.get("year", "")).strip()
+            url = paper.get("pdf_url") or paper.get("url") or paper.get("source_url", "")
+
+            full_text = f"Title: {title}\nAuthors: {authors} ({year})\nDirect Link: {url}\n\nAbstract & Core Findings:\n{abstract}"
+
+            clean_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", title.lower())[:30]
+            cid = f"doc_{idx+1}_{clean_slug}"
+            ids.append(cid)
+            documents.append(full_text)
+            metadatas.append({
+                "title": title,
+                "paper_title": title,
+                "authors": authors,
+                "year": year,
+                "url": url,
+                "pdf_url": url,
+                "page": 1
+            })
+
+        if not documents:
+            return 0
+
+        embeddings = self.embedder.encode(documents, show_progress_bar=False).tolist()
+
+        self.collection.upsert(
+            ids=ids,
+            documents=documents,
+            metadatas=metadatas,
+            embeddings=embeddings
+        )
+
+        for cid, doc, meta in zip(ids, documents, metadatas):
+            if cid not in self.bm25_ids:
+                self.bm25_ids.append(cid)
+                self.bm25_documents.append(doc)
+                self.bm25_metadatas.append(meta)
+
+        tokenized_corpus = [doc.lower().split() for doc in self.bm25_documents]
+        if tokenized_corpus:
+            self.bm25_index = BM25Okapi(tokenized_corpus)
+
+        import gc
+        gc.collect()
+
+        return len(documents)
+
     def search(
         self,
         query: str,
@@ -256,7 +321,7 @@ class HybridRAG:
         return final_chunks
 
     def format_citation_context(self, search_results: List[Dict[str, Any]]) -> str:
-        """Formats retrieved chunks with citations suitable for LLM grounding."""
+        """Formats retrieved chunks with citations and direct links suitable for LLM grounding."""
         if not search_results:
             return "No relevant literature context found in vector knowledge base."
 
@@ -264,13 +329,15 @@ class HybridRAG:
         for i, item in enumerate(search_results, 1):
             meta = item.get("metadata", {})
             source = meta.get("paper_title") or meta.get("title") or meta.get("source_file", "Unknown")
-            page = meta.get("page", "?")
+            url = meta.get("pdf_url") or meta.get("url") or meta.get("source_url")
+            link_str = f" | Direct Link: {url}" if url else ""
+            page = meta.get("page", 1)
             raw_text = item.get("text", "").strip()
-            # Keep each excerpt concise to avoid token budget overflow
+            # Keep excerpt concise
             words = raw_text.split()
-            truncated_text = " ".join(words[:160]) + ("..." if len(words) > 160 else "")
+            truncated_text = " ".join(words[:180]) + ("..." if len(words) > 180 else "")
             formatted.append(
-                f"[Document {i}] - Source: {source} (Page {page})\n"
+                f"[Document {i}] - Source: {source}{link_str}\n"
                 f"Context Excerpt:\n{truncated_text}\n"
             )
 

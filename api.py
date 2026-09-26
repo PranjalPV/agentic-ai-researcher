@@ -1,6 +1,13 @@
 import os
 import gc
 import json
+
+# Constrain Linux memory arenas and background math threads to prevent Render 512MB OOM
+os.environ["MALLOC_ARENA_MAX"] = "2"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+
 import uuid
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
