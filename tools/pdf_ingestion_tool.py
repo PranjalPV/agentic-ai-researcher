@@ -39,7 +39,7 @@ def _extract_urls(raw_input: Any) -> List[str]:
 
 
 @tool("pdf_download_tool")
-def pdf_ingestion_tool(pdf_urls: Union[List[str], str]) -> str:
+def pdf_ingestion_tool(pdf_urls: str) -> str:
     """
     Download academic PDF research papers from a list of web URLs to local temporary storage.
 

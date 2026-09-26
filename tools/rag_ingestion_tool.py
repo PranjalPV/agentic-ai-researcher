@@ -78,7 +78,7 @@ def _extract_papers(raw_input: Any) -> List[Dict[str, Any]]:
 
 
 @tool("rag_pdf_indexer_tool")
-def rag_ingestion_tool(literature_data: Union[Any, str]) -> str:
+def rag_ingestion_tool(literature_data: str) -> str:
     """
     Ingest, chunk, and index academic literature into the Hybrid RAG knowledge base (Dense Vector + BM25 Lexical).
     Attaches direct open-access paper URLs and titles for grounded citations.

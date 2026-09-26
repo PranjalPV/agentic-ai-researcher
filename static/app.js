@@ -61,6 +61,7 @@ const phaseMessages = [
 // Initialize on Load
 document.addEventListener("DOMContentLoaded", () => {
     checkSystemHealth();
+    setInterval(checkSystemHealth, 8000);
     loadReportsList();
     setupEventListeners();
 });
@@ -356,6 +357,16 @@ function handleResearchError(errMsg) {
     clearInterval(pollInterval);
 
     showToast(`Error: ${errMsg}`, "error");
+
+    if (errMsg && (errMsg.includes("quota") || errMsg.includes("rate limit") || errMsg.includes("Rate limit"))) {
+        const apiKeyModal = document.getElementById("apiKeyModal");
+        if (apiKeyModal) {
+            apiKeyModal.classList.remove("hidden");
+        }
+        setTimeout(() => {
+            showToast("Server key reached Groq limit. Enter your own free key!", "error");
+        }, 1200);
+    }
 }
 
 // Stored Reports Drawer
