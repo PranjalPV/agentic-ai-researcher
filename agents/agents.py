@@ -96,8 +96,14 @@ def create_insight_agent() -> Agent:
         allow_delegation=False
     )
 
-# Singletons for backward compatibility
-research_agent = create_research_agent()
-ingestion_agent = create_ingestion_agent()
-comparison_agent = create_comparison_agent()
-insight_agent = create_insight_agent()
+# Lazy accessors for backward compatibility without eager startup memory allocation
+def __getattr__(name: str):
+    if name == "research_agent":
+        return create_research_agent()
+    if name == "ingestion_agent":
+        return create_ingestion_agent()
+    if name == "comparison_agent":
+        return create_comparison_agent()
+    if name == "insight_agent":
+        return create_insight_agent()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

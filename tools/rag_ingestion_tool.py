@@ -60,6 +60,22 @@ def _extract_papers(raw_input: Any) -> List[Dict[str, Any]]:
         except Exception:
             pass
 
+        # JSON-style key-value extraction for truncated or partial JSON strings
+        json_titles = re.findall(r'["\']title["\']\s*:\s*["\']([^"\']+)["\']', raw_input)
+        json_urls = re.findall(r'["\']pdf_url["\']\s*:\s*["\']([^"\']+)["\']', raw_input)
+        json_abstracts = re.findall(r'["\'](?:abstract|summary|methodology)["\']\s*:\s*["\']([^"\']+)["\']', raw_input)
+        if json_titles:
+            papers = []
+            for i, t in enumerate(json_titles):
+                url = json_urls[i] if i < len(json_urls) else ""
+                abstract = json_abstracts[i] if i < len(json_abstracts) else ""
+                papers.append({
+                    "title": t.strip(" *-\""),
+                    "summary": abstract or f"Academic research paper: {t.strip()}",
+                    "pdf_url": url
+                })
+            return papers
+
         # Regex fallback for text-formatted paper lists
         title_matches = re.findall(r"(?:Title|Paper Title|\bTitle\b):\s*([^\n\r]+)", raw_input, re.IGNORECASE)
         url_matches = re.findall(r"https?://(?:arxiv\.org/[^\s'\"<>,;]+|[^\s'\"<>,;]+\.pdf)", raw_input)

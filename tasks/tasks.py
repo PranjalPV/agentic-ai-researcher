@@ -89,8 +89,18 @@ def create_insight_task(agent: Agent, r_task: Task, c_task: Task) -> Task:
         """
     )
 
-# Singletons for backward compatibility
-research_task = create_research_task(research_agent)
-ingestion_task = create_ingestion_task(ingestion_agent, research_task)
-comparison_task = create_comparison_task(comparison_agent, research_task)
-insight_task = create_insight_task(insight_agent, research_task, comparison_task)
+# Lazy accessors for backward compatibility without eager startup memory allocation
+def _get_task(name: str):
+    from agents.agents import research_agent, ingestion_agent, comparison_agent, insight_agent
+    if name == "research_task":
+        return create_research_task(research_agent)
+    if name == "ingestion_task":
+        return create_ingestion_task(ingestion_agent, _get_task("research_task"))
+    if name == "comparison_task":
+        return create_comparison_task(comparison_agent, _get_task("research_task"))
+    if name == "insight_task":
+        return create_insight_task(insight_agent, _get_task("research_task"), _get_task("comparison_task"))
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
+def __getattr__(name: str):
+    return _get_task(name)

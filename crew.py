@@ -8,22 +8,14 @@ from agents.agents import (
     create_research_agent,
     create_ingestion_agent,
     create_comparison_agent,
-    create_insight_agent,
-    research_agent,
-    ingestion_agent,
-    comparison_agent,
-    insight_agent
+    create_insight_agent
 )
 
 from tasks.tasks import (
     create_research_task,
     create_ingestion_task,
     create_comparison_task,
-    create_insight_task,
-    research_task,
-    ingestion_task,
-    comparison_task,
-    insight_task
+    create_insight_task
 )
 
 from rag.rag_tool import reset_rag_engine
@@ -53,8 +45,11 @@ def build_crew() -> Crew:
         verbose=True
     )
 
-# Pre-configured Crew instance for direct imports (backwards compatibility)
-crew = build_crew()
+# Lazy accessor for backwards compatibility without eager startup memory allocation
+def __getattr__(name: str):
+    if name == "crew":
+        return build_crew()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 def run_research(query: str, save_report: bool = True, session_id: Optional[str] = None) -> str:
@@ -62,6 +57,9 @@ def run_research(query: str, save_report: bool = True, session_id: Optional[str]
     Executes the autonomous multi-agent research pipeline for a topic.
     Manages session isolation, execution lifecycle, and report export.
     """
+    import gc
+    gc.collect()
+
     clean_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", query.strip().lower())[:30]
     session_name = session_id or f"session_{clean_slug}_{int(datetime.now().timestamp())}"
 
@@ -74,6 +72,10 @@ def run_research(query: str, save_report: bool = True, session_id: Optional[str]
     active_crew = build_crew()
     result = active_crew.kickoff(inputs={"query": query})
     result_text = str(result)
+
+    # Immediately release crew objects to reclaim memory on constrained cloud instances
+    del active_crew
+    gc.collect()
 
     if save_report:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

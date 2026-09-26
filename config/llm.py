@@ -83,20 +83,25 @@ def _safe_litellm_completion(*args, **kwargs):
             else:
                 wait_time = 12.0
 
-            if wait_time > 45.0:
-                # Quota exceeded for this specific model, attempt dynamic model fallback
+            if wait_time > 10.0:
+                # Quota exceeded or high wait for this specific model, attempt dynamic model fallback immediately
                 if "120b" in current_model:
-                    print(f"\n[GroqFallback] Switching from {current_model} to groq/openai/gpt-oss-20b due to quota wait: {wait_time:.0f}s")
+                    print(f"\n[GroqFallback] Switching from {current_model} to groq/openai/gpt-oss-20b due to rate limit wait: {wait_time:.1f}s")
                     kwargs["model"] = "groq/openai/gpt-oss-20b"
                     continue
+                elif "20b" in current_model:
+                    print(f"\n[GroqFallback] Switching from {current_model} to groq/qwen/qwen3.8-27b due to rate limit wait: {wait_time:.1f}s")
+                    kwargs["model"] = "groq/qwen/qwen3.8-27b"
+                    continue
                 elif "qwen" in current_model:
-                    print(f"\n[GroqFallback] Switching from {current_model} to groq/openai/gpt-oss-120b due to quota wait: {wait_time:.0f}s")
+                    print(f"\n[GroqFallback] Switching from {current_model} to groq/openai/gpt-oss-120b due to rate limit wait: {wait_time:.1f}s")
                     kwargs["model"] = "groq/openai/gpt-oss-120b"
                     continue
-                raise RuntimeError(
-                    f"Groq token quota reached (requested wait: {wait_time:.0f}s). "
-                    f"Please try again in a few moments or provide a key with higher tier quota."
-                )
+                elif wait_time > 45.0:
+                    raise RuntimeError(
+                        f"Groq token quota reached (requested wait: {wait_time:.0f}s). "
+                        f"Please try again in a few moments or provide a key with higher tier quota."
+                    )
 
             print(f"\n[GroqRateLimiter] Rate limit on '{kwargs.get('model', current_model)}'. Waiting {wait_time:.1f}s (attempt {attempt+1}/{max_attempts})...")
             time.sleep(wait_time)
@@ -108,13 +113,25 @@ def _safe_litellm_completion(*args, **kwargs):
                 # Intercept Groq function calling token rejection and convert to standard CrewAI ReAct text
                 match = re.search(r'"failed_generation"\s*:\s*("(?:\\.|[^"\\])*")', err_str)
                 if match:
+                    tool_name = ""
+                    tool_args_str = "{}"
                     try:
                         raw_fg = json.loads(match.group(1))
                         fg_obj = json.loads(raw_fg) if isinstance(raw_fg, str) else raw_fg
                         tool_name = fg_obj.get("name", "")
                         tool_args = fg_obj.get("arguments", {})
                         tool_args_str = json.dumps(tool_args) if isinstance(tool_args, dict) else str(tool_args)
+                    except Exception:
+                        # Fallback for truncated/malformed JSON in failed_generation
+                        raw_str = match.group(1)
+                        name_m = re.search(r'["\']name["\']\s*:\s*["\']([^"\']+)["\']', raw_str)
+                        if name_m:
+                            tool_name = name_m.group(1)
+                        arg_m = re.search(r'["\']arguments["\']\s*:\s*(\{.*)', raw_str, re.DOTALL)
+                        if arg_m:
+                            tool_args_str = arg_m.group(1).rstrip('"}') + '"}'
 
+                    if tool_name:
                         react_text = f"Action: {tool_name}\nAction Input: {tool_args_str}"
                         msg = Message(content=react_text, role="assistant")
                         choice = Choices(finish_reason="stop", index=0, message=msg)
@@ -123,8 +140,6 @@ def _safe_litellm_completion(*args, **kwargs):
                             choices=[choice],
                             model=kwargs.get("model", current_model)
                         )
-                    except Exception as parse_err:
-                        print(f"[ToolInterceptor] Error parsing failed_generation: {parse_err}")
             raise e
 
 litellm.completion = _safe_litellm_completion
@@ -136,14 +151,14 @@ def get_llm(model_type: str = "primary") -> LLM:
     """
     Factory to return an enterprise-grade LLM instance with fallback support.
     Defaults to Groq's high-speed openai/gpt-oss-120b with automatic token recovery.
-    Allocates generous token limits (2800 for synthesis) so full 6-section dossiers complete cleanly.
+    Allocates generous token limits (2048 for primary, 3000 for synthesis) so full 6-section dossiers complete cleanly.
     """
     groq_api_key = os.getenv("GROQ_API_KEY")
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if model_type == "synthesis":
-        max_tokens = int(os.getenv("GROQ_MAX_TOKENS_SYNTHESIS", "2800"))
+        max_tokens = int(os.getenv("GROQ_MAX_TOKENS_SYNTHESIS", "3000"))
     else:
-        max_tokens = int(os.getenv("GROQ_MAX_TOKENS", "1200"))
+        max_tokens = int(os.getenv("GROQ_MAX_TOKENS", "2048"))
 
     if groq_api_key and groq_api_key.strip() != "":
         default_model = os.getenv("GROQ_PRIMARY_MODEL") or os.getenv("GROQ_MODEL") or "groq/openai/gpt-oss-120b"

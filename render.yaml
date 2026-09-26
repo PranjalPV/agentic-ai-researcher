@@ -13,6 +13,10 @@ services:
         sync: false
       - key: GROQ_PRIMARY_MODEL
         value: "groq/openai/gpt-oss-120b"
+      - key: GROQ_MAX_TOKENS
+        value: "2048"
+      - key: GROQ_MAX_TOKENS_SYNTHESIS
+        value: "3000"
       - key: MALLOC_ARENA_MAX
         value: "2"
       - key: OMP_NUM_THREADS
