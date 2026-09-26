@@ -5,6 +5,10 @@ from typing import Optional
 from crewai import Crew, Process
 
 from agents.agents import (
+    create_research_agent,
+    create_ingestion_agent,
+    create_comparison_agent,
+    create_insight_agent,
     research_agent,
     ingestion_agent,
     comparison_agent,
@@ -12,6 +16,10 @@ from agents.agents import (
 )
 
 from tasks.tasks import (
+    create_research_task,
+    create_ingestion_task,
+    create_comparison_task,
+    create_insight_task,
     research_task,
     ingestion_task,
     comparison_task,
@@ -24,20 +32,23 @@ REPORTS_DIR = "reports"
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
 def build_crew() -> Crew:
-    """Builds a fresh Crew instance for each research run to isolate state and task contexts."""
+    """
+    Builds a completely fresh Crew instance with isolated Agent and Task objects.
+    Prevents CrewAI 'Executor is already running' concurrency/recycling errors.
+    """
+    a1 = create_research_agent()
+    a2 = create_ingestion_agent()
+    a3 = create_comparison_agent()
+    a4 = create_insight_agent()
+
+    t1 = create_research_task(a1)
+    t2 = create_ingestion_task(a2, t1)
+    t3 = create_comparison_task(a3, t1)
+    t4 = create_insight_task(a4, t1, t3)
+
     return Crew(
-        agents=[
-            research_agent,
-            ingestion_agent,
-            comparison_agent,
-            insight_agent
-        ],
-        tasks=[
-            research_task,
-            ingestion_task,
-            comparison_task,
-            insight_task
-        ],
+        agents=[a1, a2, a3, a4],
+        tasks=[t1, t2, t3, t4],
         process=Process.sequential,
         verbose=True
     )
