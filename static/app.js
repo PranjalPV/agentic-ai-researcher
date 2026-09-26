@@ -52,21 +52,73 @@ const steps = [
 
 // Phase descriptions
 const phaseMessages = [
-    "Phase 1: Literature Scout querying arXiv & Semantic Scholar with direct links...",
+    "Phase 1: Literature Scout querying arXiv & Semantic Scholar (Groq GPT-OSS 20B)...",
     "Phase 2: Indexing paper abstracts & methodologies into Hybrid RAG...",
-    "Phase 3: Hybrid Retrieval (ChromaDB + BM25) & comparative matrix...",
-    "Phase 4: Research Strategist synthesizing Executive Dossier & paper download links..."
+    "Phase 3: Hybrid Retrieval (Dense Vector + BM25Okapi with RRF) & comparative matrix...",
+    "Phase 4: Research Strategist synthesizing Executive Dossier with direct links (Groq GPT-OSS 120B)..."
 ];
 
 // Initialize on Load
 document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
     checkSystemHealth();
     setInterval(checkSystemHealth, 8000);
     loadReportsList();
     setupEventListeners();
 });
 
+// Theme Management
+function initTheme() {
+    const savedTheme = localStorage.getItem("researcher_theme") || "dark";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+    updateThemeButton(savedTheme);
+}
+
+function updateThemeButton(theme) {
+    const themeBtn = document.getElementById("themeToggleBtn");
+    if (!themeBtn) return;
+    if (theme === "dark") {
+        themeBtn.innerHTML = `🌙 <span class="theme-label">Dark</span>`;
+        themeBtn.title = "Switch to Light Mode";
+    } else {
+        themeBtn.innerHTML = `☀️ <span class="theme-label">Light</span>`;
+        themeBtn.title = "Switch to Dark Mode";
+    }
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme") || "dark";
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("researcher_theme", next);
+    updateThemeButton(next);
+    showToast(`Switched to ${next} theme`, "info");
+}
+
 function setupEventListeners() {
+    // Theme Toggle
+    const themeToggleBtn = document.getElementById("themeToggleBtn");
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener("click", toggleTheme);
+    }
+
+    // Input Clear Button
+    const clearInputBtn = document.getElementById("clearInputBtn");
+    if (clearInputBtn && queryInput) {
+        queryInput.addEventListener("input", () => {
+            if (queryInput.value.trim().length > 0) {
+                clearInputBtn.classList.remove("hidden");
+            } else {
+                clearInputBtn.classList.add("hidden");
+            }
+        });
+        clearInputBtn.addEventListener("click", () => {
+            queryInput.value = "";
+            queryInput.focus();
+            clearInputBtn.classList.add("hidden");
+        });
+    }
+
     // Research Form Submit
     researchForm.addEventListener("submit", (e) => {
         e.preventDefault();
@@ -79,8 +131,9 @@ function setupEventListeners() {
     document.querySelectorAll(".chip").forEach(chip => {
         chip.addEventListener("click", () => {
             queryInput.value = chip.getAttribute("data-query");
+            if (clearInputBtn) clearInputBtn.classList.remove("hidden");
             queryInput.focus();
-            showToast("Topic populated into input field", "info");
+            showToast("Topic populated into inquiry field", "info");
         });
     });
 
@@ -95,6 +148,15 @@ function setupEventListeners() {
             document.getElementById(targetId).classList.add("active");
         });
     });
+
+    // Print / PDF Button
+    const printBtn = document.getElementById("printBtn");
+    if (printBtn) {
+        printBtn.addEventListener("click", () => {
+            if (!currentReportText) return;
+            window.print();
+        });
+    }
 
     // Download Button (Client-side Blob - zero reload, instant download)
     downloadBtn.addEventListener("click", () => {
@@ -134,10 +196,26 @@ function setupEventListeners() {
         }
     });
 
-    // Drawer Controls
+    // Drawer Controls & Search Filter
     toggleDrawerBtn.addEventListener("click", openDrawer);
     closeDrawerBtn.addEventListener("click", closeDrawer);
     drawerOverlay.addEventListener("click", closeDrawer);
+
+    const drawerSearchInput = document.getElementById("drawerSearchInput");
+    if (drawerSearchInput) {
+        drawerSearchInput.addEventListener("input", (e) => {
+            const term = e.target.value.toLowerCase().trim();
+            const items = document.querySelectorAll(".report-item");
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (!term || text.includes(term)) {
+                    item.style.display = "";
+                } else {
+                    item.style.display = "none";
+                }
+            });
+        });
+    }
 
     // API Key Modal Controls
     const apiKeyBtn = document.getElementById("apiKeyBtn");
@@ -334,6 +412,10 @@ function handleResearchSuccess(resultText) {
     // Render Markdown via marked.js
     if (window.marked) {
         tabRendered.innerHTML = marked.parse(resultText);
+        tabRendered.querySelectorAll("a").forEach(a => {
+            a.setAttribute("target", "_blank");
+            a.setAttribute("rel", "noopener noreferrer");
+        });
     } else {
         tabRendered.textContent = resultText;
     }
@@ -412,6 +494,10 @@ async function loadReport(filename) {
 
         if (window.marked) {
             tabRendered.innerHTML = marked.parse(data.content);
+            tabRendered.querySelectorAll("a").forEach(a => {
+                a.setAttribute("target", "_blank");
+                a.setAttribute("rel", "noopener noreferrer");
+            });
         } else {
             tabRendered.textContent = data.content;
         }

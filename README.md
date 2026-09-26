@@ -62,16 +62,16 @@ flowchart TD
 ### 4. Isolated Vector Sessions (Zero Cross-Topic Contamination)
 * Rather than a static, hardcoded vector database, each query dynamically provisions an isolated session (`session_<slug>_<timestamp>`). This eliminates cross-topic hallucination and vector pollution across research queries.
 
-### 4. Pydantic Structured Data Contracts
+### 5. Pydantic Structured Data Contracts
 * Type-safe schemas defined in [`schemas/research_models.py`](file:///D:/PV/agentic-ai-researcher/schemas/research_models.py) enforce structured handoffs between agents:
   * `PaperMetadata`: Metadata and direct PDF links.
   * `PaperComparisonItem`: Standardized dimensions (Methodology, Datasets, Results, Strengths, Limitations).
   * `StrategicInsights`: Unresolved research gaps and high-impact future directions.
 
-### 5. Unified Full-Stack Architecture
+### 6. Unified Full-Stack Architecture
 * **CLI Runner (`app.py`):** Fast terminal execution with argument parsing and execution timing.
-* **FastAPI Full-Stack Service (`api.py`):** Asynchronous background job worker with REST endpoints for health checks, job dispatch, polling, and report retrieval, serving an embedded responsive Single Page Application.
-* **Web UI (`static/`):** Fast, modern, responsive frontend featuring instant suggested chips, live multi-phase execution steppers, client-side Blob Markdown export, and stored dossier management.
+* **FastAPI Full-Stack Service (`api.py`):** Asynchronous background job worker with REST endpoints for health checks, job dispatch, polling, and report retrieval.
+* **Modern Vanilla SPA Frontend (`static/`):** High-performance, zero-build Single Page Application built with Vanilla HTML5, modern CSS3 (Glassmorphism, Dark/Light modes), and ES6+ JavaScript. Requires **no React/Node compilation step**, loads in under 50ms, and features real-time agent execution steppers, live phase timers, client-side Blob Markdown export, and stored dossier management.
 
 ---
 
@@ -146,6 +146,8 @@ This project is pre-configured with [`render.yaml`](render.yaml) and [`Procfile`
    - **Start Command:** `uvicorn api:app --host 0.0.0.0 --port $PORT`
 4. **Environment Variables:**
    - Add `GROQ_API_KEY` = your Groq API Key (`gsk_...`).
+   - Add `GROQ_FAST_MODEL` = `groq/openai/gpt-oss-20b` (for high-speed literature scouting & indexing).
+   - Add `GROQ_PRIMARY_MODEL` = `groq/openai/gpt-oss-120b` (for deep meta-review & strategic synthesis).
    - Add `PYTHON_VERSION` = `3.11.0`
 5. **Deploy:** Click **Deploy Web Service**. Render builds and hosts both your interactive Web UI and FastAPI endpoints on a single public URL (`https://your-service.onrender.com`).
 

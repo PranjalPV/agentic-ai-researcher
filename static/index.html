@@ -27,6 +27,9 @@
                     <span class="dot"></span>
                     <span class="status-text">Checking System...</span>
                 </div>
+                <button id="themeToggleBtn" class="btn btn-secondary btn-sm" title="Toggle Dark/Light Mode">
+                    🌙 <span class="theme-label">Dark</span>
+                </button>
                 <button id="apiKeyBtn" class="btn btn-secondary btn-sm" title="Configure Groq API Key">
                     🔑 API Key
                 </button>
@@ -46,13 +49,18 @@
 
             <form id="researchForm" class="research-form">
                 <div class="input-group">
-                    <input 
-                        type="text" 
-                        id="queryInput" 
-                        placeholder="e.g., Direct Preference Optimization vs RLHF for Large Language Model Alignment" 
-                        autocomplete="off"
-                        required
-                    />
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔍</span>
+                        <input 
+                            type="text" 
+                            id="queryInput" 
+                            placeholder="e.g., Direct Preference Optimization vs RLHF for Large Language Model Alignment" 
+                            autocomplete="off"
+                            required
+                        />
+                        <button type="button" id="clearInputBtn" class="clear-input-btn hidden" title="Clear input">&times;</button>
+                        <span class="shortcut-pill">↵ Enter</span>
+                    </div>
                     <button type="submit" id="submitBtn" class="btn btn-primary">
                         🚀 Launch Autonomous Research Crew
                     </button>
@@ -63,16 +71,19 @@
             <div class="chips-container">
                 <span class="chips-label">💡 Suggested Topics:</span>
                 <button class="chip" data-query="Direct Preference Optimization vs RLHF for Large Language Model Alignment">
-                    ⚡ Direct Preference Optimization in LLMs
+                    <span class="chip-badge">Alignment</span> Direct Preference Optimization in LLMs
                 </button>
                 <button class="chip" data-query="Mechanistic Interpretability of Attention Heads and Induction Heads in Transformers">
-                    🔬 Mechanistic Interpretability in Transformers
+                    <span class="chip-badge">Interpretability</span> Attention & Induction Heads
                 </button>
                 <button class="chip" data-query="State Space Models Mamba versus Linear Attention Transformers for Long Sequences">
-                    🐍 State Space Models (Mamba) vs Attention
+                    <span class="chip-badge">Architecture</span> State Space Models (Mamba) vs Attention
                 </button>
                 <button class="chip" data-query="Parameter-Efficient Fine-Tuning LoRA vs QLoRA tradeoffs and quantization limits">
-                    ⚖️ LoRA vs QLoRA Tradeoffs
+                    <span class="chip-badge">Efficiency</span> LoRA vs QLoRA Tradeoffs
+                </button>
+                <button class="chip" data-query="Mixture of Experts routing mechanisms and load balancing in LLMs">
+                    <span class="chip-badge">Routing</span> Mixture of Experts Routing
                 </button>
             </div>
         </section>
@@ -134,6 +145,9 @@
                     <button id="copyBtn" class="btn btn-secondary btn-sm" title="Copy raw Markdown to clipboard">
                         📋 Copy Markdown
                     </button>
+                    <button id="printBtn" class="btn btn-secondary btn-sm" title="Print or Save as PDF">
+                        🖨️ Print / PDF
+                    </button>
                     <button id="downloadBtn" class="btn btn-primary btn-sm" title="Download report as .md file">
                         📥 Download Dossier (.md)
                     </button>
@@ -161,11 +175,11 @@
         <footer class="tech-stack-footer">
             <div class="badge-item">
                 <span class="badge-icon">🧠</span>
-                <span><b>LLM:</b> Qwen 3.8 27B / Groq</span>
+                <span><b>LLM:</b> Tiered Groq (GPT-OSS 120B / 20B)</span>
             </div>
             <div class="badge-item">
                 <span class="badge-icon">⚡</span>
-                <span><b>RAG:</b> Hybrid RAG (ChromaDB + BM25Okapi) + Direct Paper Links</span>
+                <span><b>RAG:</b> Hybrid RAG (Dense Vector + BM25Okapi) + Direct Paper Links</span>
             </div>
             <div class="badge-item">
                 <span class="badge-icon">🤖</span>
@@ -184,6 +198,9 @@
         <div class="drawer-header">
             <h3>📂 Stored Dossiers</h3>
             <button id="closeDrawerBtn" class="btn-close">&times;</button>
+        </div>
+        <div class="drawer-search-box">
+            <input type="text" id="drawerSearchInput" placeholder="🔍 Filter stored dossiers..." autocomplete="off" />
         </div>
         <div class="drawer-body">
             <div id="reportsList" class="reports-list">
