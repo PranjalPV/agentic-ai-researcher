@@ -156,11 +156,11 @@ agentic-ai-researcher/
 ├── agents/
 │   └── agents.py              # 4 specialized CrewAI agents with anti-hallucination backstories
 ├── config/
-│   └── llm.py                 # Enterprise LLM factory (Groq Qwen 3.8 27B / LLaMA)
+│   └── llm.py                 # Enterprise LLM factory (Groq OpenAI GPT-OSS 120B / 20B / Qwen fallback)
 ├── eval/
 │   └── evaluate_rag.py        # RAG benchmarking suite (Hit Rate, MRR, Latency)
 ├── rag/
-│   ├── hybrid_rag.py          # PyMuPDF chunking + ChromaDB dense + BM25 sparse + RRF
+│   ├── hybrid_rag.py          # TF-IDF dense vector store (<2MB RAM) + BM25 sparse index + RRF fusion
 │   └── rag_tool.py            # CrewAI tool wrapper with session management
 ├── schemas/
 │   ├── __init__.py
