@@ -65,13 +65,26 @@ def _safe_litellm_completion(*args, **kwargs):
     if "tools" not in kwargs:
         kwargs.pop("tool_choice", None)
 
-    current_model = kwargs.get("model", "")
-    max_attempts = 5
+    max_attempts = 8
     for attempt in range(max_attempts):
+        current_model = kwargs.get("model", "")
         try:
             return _orig_litellm_completion(*args, **kwargs)
         except litellm.exceptions.RateLimitError as e:
             if attempt == max_attempts - 1:
+                # Last attempt: if wait time is manageable, sleep it out instead of crashing
+                err_msg = str(e)
+                match = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", err_msg)
+                if match:
+                    mins = float(match.group(1)) if match.group(1) else 0.0
+                    secs = float(match.group(2))
+                    last_wait = min(mins * 60 + secs + 1.5, 30.0)
+                    print(f"\n[GroqRateLimiter] Final attempt wait: {last_wait:.1f}s...")
+                    time.sleep(last_wait)
+                    try:
+                        return _orig_litellm_completion(*args, **kwargs)
+                    except Exception:
+                        pass
                 raise e
             err_msg = str(e)
 
@@ -83,8 +96,8 @@ def _safe_litellm_completion(*args, **kwargs):
             else:
                 wait_time = 12.0
 
-            if wait_time > 10.0:
-                # Quota exceeded or high wait for this specific model, attempt dynamic model fallback immediately
+            if wait_time > 20.0:
+                # Rate limit wait is too long for this specific model, attempt dynamic model fallback immediately
                 if "120b" in current_model:
                     print(f"\n[GroqFallback] Switching from {current_model} to groq/openai/gpt-oss-20b due to rate limit wait: {wait_time:.1f}s")
                     kwargs["model"] = "groq/openai/gpt-oss-20b"
